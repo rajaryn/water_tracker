@@ -1,0 +1,779 @@
+/* ==========================================================================
+   Mobile-First Hydration Tracker Design System
+   ========================================================================== */
+
+:root {
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-surface-card: rgba(30, 41, 59, 0.7);
+  --color-surface-border: rgba(255, 255, 255, 0.1);
+  --color-primary: #0ea5e9;
+  --color-primary-hover: #0284c7;
+  --color-primary-light: #38bdf8;
+  --color-accent: #06b6d4;
+  --color-text-main: #f8fafc;
+  --color-text-muted: #94a3b8;
+  --color-text-subtle: #64748b;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --shadow-card: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+[data-theme="light"] {
+  --color-bg: #f1f5f9;
+  --color-surface: #ffffff;
+  --color-surface-card: rgba(255, 255, 255, 0.85);
+  --color-surface-border: rgba(0, 0, 0, 0.08);
+  --color-text-main: #0f172a;
+  --color-text-muted: #475569;
+  --color-text-subtle: #94a3b8;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--color-bg);
+  color: var(--color-text-main);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow-x: hidden;
+}
+
+/* Application Mobile Container Shell */
+.app-shell {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  background-color: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.4);
+}
+
+main.app-content {
+  flex: 1;
+  padding: 24px 20px 100px 20px;
+  overflow-y: auto;
+}
+
+/* Screen visibility controls */
+.screen {
+  display: none;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.screen.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Hero Physical Bottle Section --- */
+.hero-bottle-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 0 20px 0;
+}
+
+.daily-summary-header {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.greeting-text {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.consumed-amount {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--color-text-main);
+  line-height: 1.1;
+  margin: 4px 0;
+}
+
+.target-amount-sub {
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+}
+
+.linear-progress-track {
+  width: 100%;
+  max-width: 240px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 10px auto 0 auto;
+}
+
+.linear-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #38bdf8, #0ea5e9);
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bottle-container-widget {
+  position: relative;
+  width: 220px;
+  height: 380px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.bottle-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.bottle-wrapper:active {
+  transform: scale(0.96);
+}
+
+.bottle-wrapper.empty-bottle {
+  animation: pulseEmpty 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseEmpty {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+.bottle-svg {
+  width: 100%;
+  height: 300px;
+}
+
+.liquid-rect {
+  transition: y 0.6s cubic-bezier(0.4, 0, 0.2, 1), height 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wave-animation {
+  animation: waveMotion 3s infinite linear;
+}
+
+@keyframes waveMotion {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(-15px); }
+  100% { transform: translateX(0); }
+}
+
+.bottle-status-badge {
+  text-align: center;
+  margin-top: -10px;
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-surface-border);
+  padding: 8px 18px;
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(8px);
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+
+.bottle-wrapper.empty-bottle .bottle-status-badge {
+  border-color: var(--color-primary-light);
+  background: rgba(14, 165, 233, 0.2);
+}
+
+.bottle-volume-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--color-primary-light);
+}
+
+.bottle-volume-unit {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.bottle-state-label {
+  font-size: 0.75rem;
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+.bottle-state-label.tap-hint {
+  color: var(--color-primary-light);
+  font-weight: 700;
+  animation: flashHint 1.2s infinite alternate;
+}
+
+@keyframes flashHint {
+  from { opacity: 0.6; }
+  to { opacity: 1; }
+}
+
+/* Secondary Circular Goal Progress Ring */
+.progress-ring-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-surface-border);
+  padding: 14px 20px;
+  border-radius: var(--radius-md);
+  margin: 20px 0;
+}
+
+.ring-svg {
+  width: 60px;
+  height: 60px;
+  transform: rotate(-90deg);
+}
+
+.ring-bg {
+  stroke: rgba(255, 255, 255, 0.1);
+}
+
+.ring-fill {
+  stroke: var(--color-primary);
+  transition: stroke-dashoffset 0.6s ease;
+}
+
+.ring-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.ring-pct-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.ring-subtitle {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+/* --- Drinking Actions Grid --- */
+.quick-drink-section {
+  margin-top: 15px;
+}
+
+.section-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+.drink-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.btn-drink {
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-surface-border);
+  color: var(--color-text-main);
+  padding: 12px 6px;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: transform 0.15s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-drink:active {
+  transform: scale(0.94);
+  background: rgba(14, 165, 233, 0.2);
+  border-color: var(--color-primary);
+}
+
+.btn-drink span.btn-sub {
+  font-size: 0.7rem;
+  color: var(--color-text-subtle);
+  font-weight: 500;
+}
+
+.action-row-secondary {
+  display: flex;
+  gap: 12px;
+}
+
+.btn {
+  padding: 14px 20px;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+  flex: 1;
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-hover);
+}
+
+.btn-secondary {
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-surface-border);
+  color: var(--color-text-main);
+  flex: 1;
+}
+
+.btn-refill {
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
+  color: white;
+  width: 100%;
+  font-size: 1.05rem;
+  padding: 16px;
+  box-shadow: 0 6px 20px -4px rgba(14, 165, 233, 0.5);
+  margin-top: 10px;
+}
+
+/* --- Glass Vessel Component Styling --- */
+.glass-card {
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+
+.gulp-card {
+  margin-top: 14px;
+}
+
+.gulp-drop {
+  transform-origin: center center;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+}
+
+.gulp-drop.animating-drop {
+  transform: translateY(35px) scale(0.2);
+  opacity: 0;
+}
+
+.gulp-ripple.animating-ripple {
+  animation: ripplePop 0.5s ease-out forwards;
+}
+
+@keyframes ripplePop {
+  0% { r: 6px; opacity: 0.9; stroke-width: 3px; }
+  100% { r: 28px; opacity: 0; stroke-width: 1px; }
+}
+
+.glass-visual {
+  width: 50px;
+  height: 60px;
+}
+
+.glass-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.glass-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.glass-amount {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.glass-label {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+/* --- Onboarding Flow Cards --- */
+.onboarding-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 80vh;
+}
+
+.onboarding-card {
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  backdrop-filter: blur(12px);
+}
+
+.onboarding-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.onboarding-subtitle {
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.input-control {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-surface-border);
+  background: rgba(15, 23, 42, 0.6);
+  color: var(--color-text-main);
+  font-size: 1rem;
+  outline: none;
+}
+
+.input-control:focus {
+  border-color: var(--color-primary);
+}
+
+.option-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.option-card {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  text-align: center;
+}
+
+.option-card.selected {
+  border-color: var(--color-primary);
+  background: rgba(14, 165, 233, 0.15);
+}
+
+.option-card-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+
+.option-card-desc {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+/* --- History & Stats Screens --- */
+.history-day-card {
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.history-day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--color-surface-border);
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+.history-date {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.history-day-total {
+  font-size: 0.9rem;
+  color: var(--color-primary-light);
+  font-weight: 600;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 0.9rem;
+}
+
+.history-item-icon {
+  margin-right: 8px;
+}
+
+/* Stats Chart Container */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-metric-card {
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-primary-light);
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.bar-chart-container {
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.chart-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: 160px;
+  padding-top: 20px;
+}
+
+.chart-bar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.chart-bar-fill {
+  width: 20px;
+  background: var(--color-primary);
+  border-radius: 4px 4px 0 0;
+  transition: height 0.5s ease;
+  min-height: 4px;
+}
+
+.chart-bar-fill.reached {
+  background: var(--color-success);
+}
+
+.chart-bar-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+/* --- Science Transparency Page --- */
+.transparency-card {
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.transparency-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--color-primary-light);
+}
+
+.breakdown-list {
+  list-style: none;
+  margin-top: 12px;
+}
+
+.breakdown-item {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-surface-border);
+  display: flex;
+  justify-content: space-between;
+}
+
+.breakdown-item:last-child {
+  border-bottom: none;
+}
+
+.breakdown-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.breakdown-desc {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.breakdown-val {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-primary-light);
+}
+
+/* Toggle Switch Component */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 26px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-switch .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.2);
+  transition: 0.3s;
+  border-radius: 26px;
+}
+
+.toggle-switch .slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+.toggle-switch input:checked + .slider {
+  background-color: var(--color-primary);
+}
+
+.toggle-switch input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+/* --- Bottom Navigation Bar --- */
+nav.app-navbar {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  max-width: 480px;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid var(--color-surface-border);
+  display: flex;
+  justify-content: space-around;
+  padding: 10px 0 14px 0;
+  z-index: 100;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.nav-item svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.nav-item.active {
+  color: var(--color-primary-light);
+}
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
