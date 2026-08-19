@@ -3,20 +3,42 @@ from flask_cors import CORS
 from datetime import datetime, timezone, timedelta
 import json
 import os
+import uuid
 
 from config import Config
-from database import db, User, Bottle, HydrationTarget, DrinkEvent, RefillEvent, NotificationPreference
 from recommendation_engine import calculate_hydration_target, CALCULATION_VERSION, RESEARCH_BASIS
+
+# ---------------------------------------------------------------------------
+# DATABASE IMPORTS - commented out until MySQL is ready
+# ---------------------------------------------------------------------------
+# from database import (get_connection, create_tables,
+#                       User, Bottle, HydrationTarget,
+#                       DrinkEvent, RefillEvent, NotificationPreference)
+# create_tables()
+# ---------------------------------------------------------------------------
 
 app = Flask(__name__, static_folder='static', static_url_path='')
 app.config.from_object(Config)
 CORS(app)
 
-db.init_app(app)
+# ---------------------------------------------------------------------------
+# IN-MEMORY STORES  (UX / design testing only - data resets on server restart)
+# ---------------------------------------------------------------------------
+_users = {}           # user_id -> dict
+_bottles = {}         # bottle_id -> dict  (one per user, keyed by user_id too)
+_bottle_by_user = {}  # user_id -> bottle_id
+_hydration_targets = {}   # list per user_id
+_drink_events = {}    # event_id -> dict
+_refill_events = {}   # event_id -> dict
 
-# Create tables if not present
-with app.app_context():
-    db.create_all()
+
+def _gen_id():
+    return str(uuid.uuid4())
+
+
+def _now_iso():
+    return datetime.now(timezone.utc).isoformat()
+
 
 # --- Static PWA Routes ---
 @app.route('/')
@@ -31,13 +53,13 @@ def service_worker():
 def manifest():
     return send_from_directory(app.static_folder, 'manifest.json', mimetype='application/json')
 
+
 # --- API Endpoints ---
 @app.route('/api/health', methods=['GET'])
 def health():
-    db_type = "TiDB" if Config.TIDB_HOST else "SQLite (Fallback)"
     return jsonify({
         "status": "online",
-        "database": db_type,
+        "database": "in-memory (UX test mode)",
         "engine_version": CALCULATION_VERSION,
         "research_basis": RESEARCH_BASIS
     })
@@ -51,75 +73,76 @@ def get_recommendation():
 @app.route('/api/profile', methods=['POST'])
 def save_profile():
     data = request.json or {}
-    user_id = data.get("user_id")
+    user_id = data.get("user_id") or _gen_id()
 
-    user = None
-    if user_id:
-        user = db.session.get(User, user_id)
-    
-    if not user:
-        user = User()
-        if user_id:
-            user.id = user_id
+    # Upsert user
+    user = _users.get(user_id, {"id": user_id, "created_at": _now_iso()})
+    user.update({
+        "id": user_id,
+        "age": int(data.get("age", 25)),
+        "sex": str(data.get("sex", "prefer_not_to_say")),
+        "activity_level": str(data.get("activity_level", "sedentary")),
+        "environment_preference": str(data.get("environment_preference", "indoors")),
+        "pregnancy_status": str(data.get("pregnancy_status", "neither")),
+        "updated_at": _now_iso(),
+    })
+    _users[user_id] = user
 
-    user.age = int(data.get("age", 25))
-    user.sex = str(data.get("sex", "prefer_not_to_say"))
-    user.activity_level = str(data.get("activity_level", "sedentary"))
-    user.environment_preference = str(data.get("environment_preference", "indoors"))
-    user.pregnancy_status = str(data.get("pregnancy_status", "neither"))
+    # Calculate and store hydration target
+    rec = calculate_hydration_target(user)
+    target = {
+        "id": _gen_id(),
+        "user_id": user_id,
+        "target_ml": rec["target_ml"],
+        "calculation_version": rec["calculation_version"],
+        "research_basis": rec["research_basis"],
+        "profile_snapshot": json.dumps(rec["profile_snapshot"]),
+        "created_at": _now_iso(),
+    }
+    _hydration_targets.setdefault(user_id, []).append(target)
 
-    db.session.add(user)
-
-    # Calculate recommendation
-    rec = calculate_hydration_target(user.to_dict())
-    
-    # Store Hydration Target snapshot
-    target = HydrationTarget(
-        user_id=user.id,
-        target_ml=rec["target_ml"],
-        calculation_version=rec["calculation_version"],
-        research_basis=rec["research_basis"],
-        profile_snapshot=json.dumps(rec["profile_snapshot"])
-    )
-    db.session.add(target)
-    
     # Create default bottle if none exists
-    bottle = Bottle.query.filter_by(user_id=user.id).first()
-    if not bottle:
+    if user_id not in _bottle_by_user:
         bottle_cap = int(data.get("bottle_capacity_ml", 750))
-        bottle = Bottle(
-            user_id=user.id,
-            capacity_ml=bottle_cap,
-            current_volume_ml=bottle_cap,
-            name="My Water Bottle"
-        )
-        db.session.add(bottle)
+        bottle = {
+            "id": _gen_id(),
+            "user_id": user_id,
+            "name": "My Water Bottle",
+            "capacity_ml": bottle_cap,
+            "current_volume_ml": bottle_cap,
+            "theme": "ocean_blue",
+            "created_at": _now_iso(),
+            "updated_at": _now_iso(),
+        }
+        _bottles[bottle["id"]] = bottle
+        _bottle_by_user[user_id] = bottle["id"]
 
-    db.session.commit()
-
+    bottle = _bottles[_bottle_by_user[user_id]]
     return jsonify({
-        "user": user.to_dict(),
-        "target": target.to_dict(),
+        "user": user,
+        "target": target,
         "recommendation": rec,
-        "bottle": bottle.to_dict()
+        "bottle": bottle,
     })
 
 @app.route('/api/profile/<user_id>', methods=['GET'])
 def get_profile(user_id):
-    user = db.session.get(User, user_id)
+    user = _users.get(user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    target = HydrationTarget.query.filter_by(user_id=user_id).order_by(HydrationTarget.created_at.desc()).first()
-    bottle = Bottle.query.filter_by(user_id=user_id).first()
-    
-    rec = calculate_hydration_target(user.to_dict()) if user else None
-    
+    targets = _hydration_targets.get(user_id, [])
+    target = targets[-1] if targets else None
+
+    bottle_id = _bottle_by_user.get(user_id)
+    bottle = _bottles.get(bottle_id) if bottle_id else None
+
+    rec = calculate_hydration_target(user)
     return jsonify({
-        "user": user.to_dict() if user else None,
-        "target": target.to_dict() if target else None,
+        "user": user,
+        "target": target,
         "recommendation": rec,
-        "bottle": bottle.to_dict() if bottle else None
+        "bottle": bottle,
     })
 
 @app.route('/api/bottle', methods=['POST'])
@@ -129,29 +152,39 @@ def save_bottle():
     if not user_id:
         return jsonify({"error": "user_id is required"}), 400
 
-    bottle = Bottle.query.filter_by(user_id=user_id).first()
-    if not bottle:
-        bottle = Bottle(user_id=user_id)
-    
+    bottle_id = _bottle_by_user.get(user_id)
+    if bottle_id:
+        bottle = _bottles[bottle_id]
+    else:
+        bottle = {
+            "id": _gen_id(),
+            "user_id": user_id,
+            "name": "My Water Bottle",
+            "capacity_ml": 750,
+            "current_volume_ml": 750,
+            "theme": "ocean_blue",
+            "created_at": _now_iso(),
+        }
+        _bottles[bottle["id"]] = bottle
+        _bottle_by_user[user_id] = bottle["id"]
+
     if "capacity_ml" in data:
         new_cap = int(data["capacity_ml"])
-        if bottle.current_volume_ml > new_cap:
-            bottle.current_volume_ml = new_cap
-        bottle.capacity_ml = new_cap
+        if bottle["current_volume_ml"] > new_cap:
+            bottle["current_volume_ml"] = new_cap
+        bottle["capacity_ml"] = new_cap
 
     if "current_volume_ml" in data:
-        bottle.current_volume_ml = max(0, min(int(data["current_volume_ml"]), bottle.capacity_ml))
+        bottle["current_volume_ml"] = max(0, min(int(data["current_volume_ml"]), bottle["capacity_ml"]))
 
     if "name" in data:
-        bottle.name = str(data["name"])
+        bottle["name"] = str(data["name"])
 
     if "theme" in data:
-        bottle.theme = str(data["theme"])
+        bottle["theme"] = str(data["theme"])
 
-    db.session.add(bottle)
-    db.session.commit()
-
-    return jsonify(bottle.to_dict())
+    bottle["updated_at"] = _now_iso()
+    return jsonify(bottle)
 
 @app.route('/api/drink-events', methods=['POST'])
 def log_drink():
@@ -162,49 +195,52 @@ def log_drink():
     if not user_id or amount_ml <= 0:
         return jsonify({"error": "Invalid user_id or amount_ml"}), 400
 
+    # Idempotency check
     event_id = data.get("id")
-    existing = db.session.get(DrinkEvent, event_id) if event_id else None
-    if existing:
-        return jsonify(existing.to_dict())
+    if event_id and event_id in _drink_events:
+        return jsonify(_drink_events[event_id])
 
-    # Ensure user exists
-    user = db.session.get(User, user_id)
-    if not user:
-        user = User(id=user_id)
-        db.session.add(user)
+    # Auto-provision user
+    if user_id not in _users:
+        _users[user_id] = {"id": user_id, "age": 25, "sex": "prefer_not_to_say",
+                           "activity_level": "sedentary", "environment_preference": "indoors",
+                           "pregnancy_status": "neither", "created_at": _now_iso()}
 
-    bottle = Bottle.query.filter_by(user_id=user_id).first()
-    if not bottle:
-        bottle = Bottle(user_id=user_id, capacity_ml=750, current_volume_ml=750)
-        db.session.add(bottle)
+    # Auto-provision bottle
+    if user_id not in _bottle_by_user:
+        bottle = {"id": _gen_id(), "user_id": user_id, "name": "My Water Bottle",
+                  "capacity_ml": 750, "current_volume_ml": 750, "theme": "ocean_blue",
+                  "created_at": _now_iso(), "updated_at": _now_iso()}
+        _bottles[bottle["id"]] = bottle
+        _bottle_by_user[user_id] = bottle["id"]
+
+    bottle = _bottles[_bottle_by_user[user_id]]
 
     source = data.get("source", "quick_add")
     is_external = source in ['glass', 'gulp', 'external']
 
-    if bottle and not is_external:
-        bottle.current_volume_ml = max(0, bottle.current_volume_ml - amount_ml)
-        db.session.add(bottle)
+    if not is_external:
+        bottle["current_volume_ml"] = max(0, bottle["current_volume_ml"] - amount_ml)
+        bottle["updated_at"] = _now_iso()
 
-    drink_event = DrinkEvent(
-        id=event_id or None,
-        user_id=user_id,
-        bottle_id=bottle.id if bottle else None,
-        amount_ml=amount_ml,
-        source=source
-    )
+    ts = _now_iso()
     if "timestamp" in data:
         try:
-            drink_event.timestamp = datetime.fromisoformat(data["timestamp"].replace('Z', '+00:00'))
+            ts = datetime.fromisoformat(data["timestamp"].replace('Z', '+00:00')).isoformat()
         except Exception:
             pass
 
-    db.session.add(drink_event)
-    db.session.commit()
+    event = {
+        "id": event_id or _gen_id(),
+        "user_id": user_id,
+        "bottle_id": bottle["id"],
+        "amount_ml": amount_ml,
+        "timestamp": ts,
+        "source": source,
+    }
+    _drink_events[event["id"]] = event
 
-    return jsonify({
-        "event": drink_event.to_dict(),
-        "bottle": bottle.to_dict() if bottle else None
-    })
+    return jsonify({"event": event, "bottle": bottle})
 
 @app.route('/api/refill-events', methods=['POST'])
 def log_refill():
@@ -213,198 +249,175 @@ def log_refill():
     if not user_id:
         return jsonify({"error": "user_id is required"}), 400
 
+    # Idempotency check
     event_id = data.get("id")
-    existing = db.session.get(RefillEvent, event_id) if event_id else None
-    if existing:
-        return jsonify(existing.to_dict())
+    if event_id and event_id in _refill_events:
+        return jsonify(_refill_events[event_id])
 
-    user = db.session.get(User, user_id)
-    if not user:
-        user = User(id=user_id)
-        db.session.add(user)
+    # Auto-provision user & bottle
+    if user_id not in _users:
+        _users[user_id] = {"id": user_id, "age": 25, "sex": "prefer_not_to_say",
+                           "activity_level": "sedentary", "environment_preference": "indoors",
+                           "pregnancy_status": "neither", "created_at": _now_iso()}
 
-    bottle = Bottle.query.filter_by(user_id=user_id).first()
-    if not bottle:
-        bottle = Bottle(user_id=user_id, capacity_ml=750, current_volume_ml=750)
-        db.session.add(bottle)
+    if user_id not in _bottle_by_user:
+        bottle = {"id": _gen_id(), "user_id": user_id, "name": "My Water Bottle",
+                  "capacity_ml": 750, "current_volume_ml": 750, "theme": "ocean_blue",
+                  "created_at": _now_iso(), "updated_at": _now_iso()}
+        _bottles[bottle["id"]] = bottle
+        _bottle_by_user[user_id] = bottle["id"]
 
-    amount_added = bottle.capacity_ml - bottle.current_volume_ml
-    bottle.current_volume_ml = bottle.capacity_ml
-    db.session.add(bottle)
+    bottle = _bottles[_bottle_by_user[user_id]]
+    amount_added = bottle["capacity_ml"] - bottle["current_volume_ml"]
+    bottle["current_volume_ml"] = bottle["capacity_ml"]
+    bottle["updated_at"] = _now_iso()
 
-    refill_event = RefillEvent(
-        id=event_id or None,
-        user_id=user_id,
-        bottle_id=bottle.id,
-        amount_added_ml=amount_added
-    )
+    ts = _now_iso()
     if "timestamp" in data:
         try:
-            refill_event.timestamp = datetime.fromisoformat(data["timestamp"].replace('Z', '+00:00'))
+            ts = datetime.fromisoformat(data["timestamp"].replace('Z', '+00:00')).isoformat()
         except Exception:
             pass
 
-    db.session.add(refill_event)
-    db.session.commit()
+    event = {
+        "id": event_id or _gen_id(),
+        "user_id": user_id,
+        "bottle_id": bottle["id"],
+        "amount_added_ml": amount_added,
+        "timestamp": ts,
+    }
+    _refill_events[event["id"]] = event
 
-    return jsonify({
-        "event": refill_event.to_dict(),
-        "bottle": bottle.to_dict()
-    })
+    return jsonify({"event": event, "bottle": bottle})
 
 @app.route('/api/sync', methods=['POST'])
 def batch_sync():
-    """
-    Idempotent batch sync for offline queue.
-    Accepts arrays of drink_events, refill_events, user profile, and latest bottle state.
-    """
+    """Idempotent batch sync for offline queue."""
     try:
         data = request.json or {}
         user_id = data.get("user_id")
-        user_data = data.get("user")
-        bottle_data = data.get("bottle")
-        drink_events = data.get("drink_events", [])
-        refill_events = data.get("refill_events", [])
-
         if not user_id:
             return jsonify({"status": "ignored", "reason": "No user_id provided"}), 200
 
-        # Auto-provision User if missing
-        user = db.session.get(User, user_id)
-        if not user:
-            user = User(id=user_id)
-            if user_data:
-                user.age = int(user_data.get("age", 25))
-                user.sex = str(user_data.get("sex", "prefer_not_to_say"))
-                user.activity_level = str(user_data.get("activity_level", "sedentary"))
-                user.environment_preference = str(user_data.get("environment_preference", "indoors"))
-                user.pregnancy_status = str(user_data.get("pregnancy_status", "neither"))
-            db.session.add(user)
+        user_data = data.get("user")
+        bottle_data = data.get("bottle")
 
-        # Auto-provision or update Bottle if missing
-        bottle = Bottle.query.filter_by(user_id=user_id).first()
-        if not bottle:
-            bottle_id = bottle_data.get("id") if bottle_data else None
+        # Auto-provision user
+        if user_id not in _users:
+            _users[user_id] = {
+                "id": user_id,
+                "age": int(user_data.get("age", 25)) if user_data else 25,
+                "sex": str(user_data.get("sex", "prefer_not_to_say")) if user_data else "prefer_not_to_say",
+                "activity_level": str(user_data.get("activity_level", "sedentary")) if user_data else "sedentary",
+                "environment_preference": str(user_data.get("environment_preference", "indoors")) if user_data else "indoors",
+                "pregnancy_status": str(user_data.get("pregnancy_status", "neither")) if user_data else "neither",
+                "created_at": _now_iso(),
+            }
+
+        # Auto-provision or update bottle
+        if user_id not in _bottle_by_user:
             cap_ml = int(bottle_data.get("capacity_ml", 750)) if bottle_data else 750
-            cur_ml = int(bottle_data.get("current_volume_ml", cap_ml)) if bottle_data else cap_ml
-            theme = bottle_data.get("theme", "ocean_blue") if bottle_data else "ocean_blue"
-            bottle = Bottle(
-                id=bottle_id or None,
-                user_id=user_id,
-                capacity_ml=cap_ml,
-                current_volume_ml=cur_ml,
-                theme=theme
-            )
-            db.session.add(bottle)
+            bottle = {
+                "id": bottle_data.get("id") if bottle_data else _gen_id(),
+                "user_id": user_id,
+                "capacity_ml": cap_ml,
+                "current_volume_ml": int(bottle_data.get("current_volume_ml", cap_ml)) if bottle_data else cap_ml,
+                "theme": bottle_data.get("theme", "ocean_blue") if bottle_data else "ocean_blue",
+                "name": "My Water Bottle",
+                "created_at": _now_iso(), "updated_at": _now_iso(),
+            }
+            _bottles[bottle["id"]] = bottle
+            _bottle_by_user[user_id] = bottle["id"]
         elif bottle_data:
+            bottle = _bottles[_bottle_by_user[user_id]]
             if "current_volume_ml" in bottle_data:
-                bottle.current_volume_ml = int(bottle_data["current_volume_ml"])
+                bottle["current_volume_ml"] = int(bottle_data["current_volume_ml"])
             if "capacity_ml" in bottle_data:
-                bottle.capacity_ml = int(bottle_data["capacity_ml"])
+                bottle["capacity_ml"] = int(bottle_data["capacity_ml"])
             if "theme" in bottle_data:
-                bottle.theme = str(bottle_data["theme"])
-            db.session.add(bottle)
+                bottle["theme"] = str(bottle_data["theme"])
+            bottle["updated_at"] = _now_iso()
 
+        bottle = _bottles[_bottle_by_user[user_id]]
         synced_drinks = []
         synced_refills = []
 
-        for d in drink_events:
+        for d in data.get("drink_events", []):
             eid = d.get("id")
-            if eid and db.session.get(DrinkEvent, eid):
+            if eid and eid in _drink_events:
                 continue
-            ev = DrinkEvent(
-                id=eid or None,
-                user_id=user_id,
-                bottle_id=bottle.id,
-                amount_ml=int(d.get("amount_ml", 0)),
-                source=d.get("source", "quick_add")
-            )
+            ts = _now_iso()
             if d.get("timestamp"):
                 try:
-                    ev.timestamp = datetime.fromisoformat(d["timestamp"].replace('Z', '+00:00'))
+                    ts = datetime.fromisoformat(d["timestamp"].replace('Z', '+00:00')).isoformat()
                 except Exception:
                     pass
-            db.session.add(ev)
+            ev = {"id": eid or _gen_id(), "user_id": user_id, "bottle_id": bottle["id"],
+                  "amount_ml": int(d.get("amount_ml", 0)), "source": d.get("source", "quick_add"), "timestamp": ts}
+            _drink_events[ev["id"]] = ev
             if eid:
                 synced_drinks.append(eid)
 
-        for r in refill_events:
+        for r in data.get("refill_events", []):
             eid = r.get("id")
-            if eid and db.session.get(RefillEvent, eid):
+            if eid and eid in _refill_events:
                 continue
-            ev = RefillEvent(
-                id=eid or None,
-                user_id=user_id,
-                bottle_id=bottle.id,
-                amount_added_ml=int(r.get("amount_added_ml", 0))
-            )
+            ts = _now_iso()
             if r.get("timestamp"):
                 try:
-                    ev.timestamp = datetime.fromisoformat(r["timestamp"].replace('Z', '+00:00'))
+                    ts = datetime.fromisoformat(r["timestamp"].replace('Z', '+00:00')).isoformat()
                 except Exception:
                     pass
-            db.session.add(ev)
+            ev = {"id": eid or _gen_id(), "user_id": user_id, "bottle_id": bottle["id"],
+                  "amount_added_ml": int(r.get("amount_added_ml", 0)), "timestamp": ts}
+            _refill_events[ev["id"]] = ev
             if eid:
                 synced_refills.append(eid)
 
-        db.session.commit()
-
-        return jsonify({
-            "status": "success",
-            "synced_drinks": synced_drinks,
-            "synced_refills": synced_refills
-        })
+        return jsonify({"status": "success", "synced_drinks": synced_drinks, "synced_refills": synced_refills})
     except Exception as e:
-        db.session.rollback()
         app.logger.error(f"Sync error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/api/history/<user_id>', methods=['GET'])
 def get_history(user_id):
-    drinks = DrinkEvent.query.filter_by(user_id=user_id).order_by(DrinkEvent.timestamp.desc()).all()
-    refills = RefillEvent.query.filter_by(user_id=user_id).order_by(RefillEvent.timestamp.desc()).all()
+    drinks = [e for e in _drink_events.values() if e["user_id"] == user_id]
+    refills = [e for e in _refill_events.values() if e["user_id"] == user_id]
 
     grouped = {}
-    
-    for d in drinks:
-        dt_str = d.timestamp.strftime("%Y-%m-%d") if d.timestamp else datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        if dt_str not in grouped:
-            grouped[dt_str] = {"date": dt_str, "total_ml": 0, "drink_count": 0, "refill_count": 0, "items": []}
-        grouped[dt_str]["total_ml"] += d.amount_ml
-        grouped[dt_str]["drink_count"] += 1
-        item_dict = d.to_dict()
-        item_dict["type"] = "drink"
-        grouped[dt_str]["items"].append(item_dict)
 
-    for r in refills:
-        dt_str = r.timestamp.strftime("%Y-%m-%d") if r.timestamp else datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        if dt_str not in grouped:
-            grouped[dt_str] = {"date": dt_str, "total_ml": 0, "drink_count": 0, "refill_count": 0, "items": []}
+    for d in sorted(drinks, key=lambda x: x["timestamp"], reverse=True):
+        dt_str = d["timestamp"][:10]
+        grouped.setdefault(dt_str, {"date": dt_str, "total_ml": 0, "drink_count": 0, "refill_count": 0, "items": []})
+        grouped[dt_str]["total_ml"] += d["amount_ml"]
+        grouped[dt_str]["drink_count"] += 1
+        grouped[dt_str]["items"].append({**d, "type": "drink"})
+
+    for r in sorted(refills, key=lambda x: x["timestamp"], reverse=True):
+        dt_str = r["timestamp"][:10]
+        grouped.setdefault(dt_str, {"date": dt_str, "total_ml": 0, "drink_count": 0, "refill_count": 0, "items": []})
         grouped[dt_str]["refill_count"] += 1
-        item_dict = r.to_dict()
-        item_dict["type"] = "refill"
-        grouped[dt_str]["items"].append(item_dict)
+        grouped[dt_str]["items"].append({**r, "type": "refill"})
 
     history_list = []
     for date_key in sorted(grouped.keys(), reverse=True):
-        day_data = grouped[date_key]
-        day_data["items"].sort(key=lambda x: x.get("timestamp") or "", reverse=True)
-        history_list.append(day_data)
+        day = grouped[date_key]
+        day["items"].sort(key=lambda x: x.get("timestamp") or "", reverse=True)
+        history_list.append(day)
 
     return jsonify({"history": history_list})
 
 @app.route('/api/stats/<user_id>', methods=['GET'])
 def get_stats(user_id):
-    user = db.session.get(User, user_id)
-    target_obj = HydrationTarget.query.filter_by(user_id=user_id).order_by(HydrationTarget.created_at.desc()).first()
-    target_ml = target_obj.target_ml if target_obj else 2500
+    targets = _hydration_targets.get(user_id, [])
+    target_ml = targets[-1]["target_ml"] if targets else 2500
 
-    drinks = DrinkEvent.query.filter_by(user_id=user_id).all()
-    
+    drinks = [e for e in _drink_events.values() if e["user_id"] == user_id]
+
     daily_map = {}
     for d in drinks:
-        dt_str = d.timestamp.strftime("%Y-%m-%d") if d.timestamp else datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        daily_map[dt_str] = daily_map.get(dt_str, 0) + d.amount_ml
+        dt_str = d["timestamp"][:10]
+        daily_map[dt_str] = daily_map.get(dt_str, 0) + d["amount_ml"]
 
     if not daily_map:
         return jsonify({
@@ -443,8 +456,7 @@ def get_stats(user_id):
     seven_day_avg = int(last_7_total / 7)
     highest_day = max(daily_map.values())
     lowest_day = min(daily_map.values())
-    total_events = len(drinks)
-    avg_events = round(total_events / total_days, 1)
+    avg_events = round(len(drinks) / total_days, 1)
     completion_rate = int((target_reached_days / 7) * 100)
 
     return jsonify({
