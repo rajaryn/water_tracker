@@ -1,137 +1,145 @@
 import uuid
+import pymysql
 from datetime import datetime, timezone
-import json
-from flask_sqlalchemy import SQLAlchemy
 
-db = SQLAlchemy()
 
 def generate_uuid():
     return str(uuid.uuid4())
 
-class User(db.Model):
-    __tablename__ = 'users'
 
-    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    age = db.Column(db.Integer, nullable=False, default=25)
-    sex = db.Column(db.String(20), nullable=False, default='prefer_not_to_say')
-    activity_level = db.Column(db.String(30), nullable=False, default='sedentary')
-    environment_preference = db.Column(db.String(30), nullable=False, default='indoors')
-    pregnancy_status = db.Column(db.String(30), nullable=False, default='neither')
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+DB_CONFIG = {
+    "host": "localhost",
+    "user": "root",
+    "password": "your_password",
+    "database": "water_tracker",
+    "charset": "utf8mb4",
+    "cursorclass": pymysql.cursors.DictCursor,
+}
 
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "age": self.age,
-            "sex": self.sex,
-            "activity_level": self.activity_level,
-            "environment_preference": self.environment_preference,
-            "pregnancy_status": self.pregnancy_status,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
-        }
 
-class Bottle(db.Model):
-    __tablename__ = 'bottles'
+def get_connection():
+    return pymysql.connect(**DB_CONFIG)
 
-    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
-    name = db.Column(db.String(50), default="My Water Bottle")
-    capacity_ml = db.Column(db.Integer, nullable=False, default=750)
-    current_volume_ml = db.Column(db.Integer, nullable=False, default=750)
-    theme = db.Column(db.String(30), default="ocean_blue")
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "name": self.name,
-            "capacity_ml": self.capacity_ml,
-            "current_volume_ml": self.current_volume_ml,
-            "theme": self.theme,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
-        }
+def create_tables():
+    connection = get_connection()
 
-class HydrationTarget(db.Model):
-    __tablename__ = 'hydration_targets'
+    try:
+        with connection.cursor() as cursor:
 
-    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
-    target_ml = db.Column(db.Integer, nullable=False)
-    calculation_version = db.Column(db.String(20), nullable=False, default="v1")
-    research_basis = db.Column(db.String(100), nullable=False)
-    profile_snapshot = db.Column(db.Text, nullable=False) # JSON string
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id VARCHAR(36) PRIMARY KEY,
+                    age INT NOT NULL DEFAULT 25,
+                    sex VARCHAR(20) NOT NULL DEFAULT 'prefer_not_to_say',
+                    activity_level VARCHAR(30) NOT NULL DEFAULT 'sedentary',
+                    environment_preference VARCHAR(30) NOT NULL DEFAULT 'indoors',
+                    pregnancy_status VARCHAR(30) NOT NULL DEFAULT 'neither',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                        ON UPDATE CURRENT_TIMESTAMP
+                )
+            """)
 
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "target_ml": self.target_ml,
-            "calculation_version": self.calculation_version,
-            "research_basis": self.research_basis,
-            "profile_snapshot": json.loads(self.profile_snapshot) if self.profile_snapshot else {},
-            "created_at": self.created_at.isoformat() if self.created_at else None
-        }
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bottles (
+                    id VARCHAR(36) PRIMARY KEY,
+                    user_id VARCHAR(36) NOT NULL,
+                    name VARCHAR(50) DEFAULT 'My Water Bottle',
+                    capacity_ml INT NOT NULL DEFAULT 750,
+                    current_volume_ml INT NOT NULL DEFAULT 750,
+                    theme VARCHAR(30) DEFAULT 'ocean_blue',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                        ON UPDATE CURRENT_TIMESTAMP,
 
-class DrinkEvent(db.Model):
-    __tablename__ = 'drink_events'
+                    CONSTRAINT fk_bottles_user
+                        FOREIGN KEY (user_id)
+                        REFERENCES users(id)
+                        ON DELETE CASCADE
+                )
+            """)
 
-    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
-    bottle_id = db.Column(db.String(36), db.ForeignKey('bottles.id'), nullable=True)
-    amount_ml = db.Column(db.Integer, nullable=False)
-    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    source = db.Column(db.String(30), default="quick_add") # quick_add, glass, custom
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS hydration_targets (
+                    id VARCHAR(36) PRIMARY KEY,
+                    user_id VARCHAR(36) NOT NULL,
+                    target_ml INT NOT NULL,
+                    calculation_version VARCHAR(20) NOT NULL DEFAULT 'v1',
+                    research_basis VARCHAR(100) NOT NULL,
+                    profile_snapshot JSON NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "bottle_id": self.bottle_id,
-            "amount_ml": self.amount_ml,
-            "timestamp": self.timestamp.isoformat() if self.timestamp else None,
-            "source": self.source
-        }
+                    CONSTRAINT fk_hydration_targets_user
+                        FOREIGN KEY (user_id)
+                        REFERENCES users(id)
+                        ON DELETE CASCADE
+                )
+            """)
 
-class RefillEvent(db.Model):
-    __tablename__ = 'refill_events'
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS drink_events (
+                    id VARCHAR(36) PRIMARY KEY,
+                    user_id VARCHAR(36) NOT NULL,
+                    bottle_id VARCHAR(36),
+                    amount_ml INT NOT NULL,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    source VARCHAR(30) DEFAULT 'quick_add',
 
-    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
-    bottle_id = db.Column(db.String(36), db.ForeignKey('bottles.id'), nullable=False)
-    amount_added_ml = db.Column(db.Integer, nullable=False)
-    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+                    CONSTRAINT fk_drink_events_user
+                        FOREIGN KEY (user_id)
+                        REFERENCES users(id)
+                        ON DELETE CASCADE,
 
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "bottle_id": self.bottle_id,
-            "amount_added_ml": self.amount_added_ml,
-            "timestamp": self.timestamp.isoformat() if self.timestamp else None
-        }
+                    CONSTRAINT fk_drink_events_bottle
+                        FOREIGN KEY (bottle_id)
+                        REFERENCES bottles(id)
+                        ON DELETE SET NULL
+                )
+            """)
 
-class NotificationPreference(db.Model):
-    __tablename__ = 'notification_preferences'
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS refill_events (
+                    id VARCHAR(36) PRIMARY KEY,
+                    user_id VARCHAR(36) NOT NULL,
+                    bottle_id VARCHAR(36) NOT NULL,
+                    amount_added_ml INT NOT NULL,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
 
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), primary_key=True)
-    enabled = db.Column(db.Boolean, default=True)
-    start_time = db.Column(db.String(10), default="08:00")
-    end_time = db.Column(db.String(10), default="22:00")
-    frequency_minutes = db.Column(db.Integer, default=120)
-    quiet_hours = db.Column(db.Boolean, default=True)
+                    CONSTRAINT fk_refill_events_user
+                        FOREIGN KEY (user_id)
+                        REFERENCES users(id)
+                        ON DELETE CASCADE,
 
-    def to_dict(self):
-        return {
-            "user_id": self.user_id,
-            "enabled": self.enabled,
-            "start_time": self.start_time,
-            "end_time": self.end_time,
-            "frequency_minutes": self.frequency_minutes,
-            "quiet_hours": self.quiet_hours
-        }
+                    CONSTRAINT fk_refill_events_bottle
+                        FOREIGN KEY (bottle_id)
+                        REFERENCES bottles(id)
+                        ON DELETE CASCADE
+                )
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS notification_preferences (
+                    user_id VARCHAR(36) PRIMARY KEY,
+                    enabled BOOLEAN DEFAULT TRUE,
+                    start_time VARCHAR(10) DEFAULT '08:00',
+                    end_time VARCHAR(10) DEFAULT '22:00',
+                    frequency_minutes INT DEFAULT 120,
+                    quiet_hours BOOLEAN DEFAULT TRUE,
+
+                    CONSTRAINT fk_notification_preferences_user
+                        FOREIGN KEY (user_id)
+                        REFERENCES users(id)
+                        ON DELETE CASCADE
+                )
+            """)
+
+        connection.commit()
+
+    finally:
+        connection.close()
+
+
+if __name__ == "__main__":
+    create_tables()
+    print("Database tables created successfully.")
