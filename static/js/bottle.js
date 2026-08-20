@@ -34,32 +34,68 @@ export class WaterBottle {
 
   getThemeColors() {
     const themes = {
+      ocean_mist: {
+        liquidGradStart: '#8ACFDF',
+        liquidGradEnd: '#4C98B1',
+        waveColor: 'rgba(138, 207, 223, 0.55)',
+        glow: 'rgba(103, 175, 196, 0.2)'
+      },
+      clear_blue: {
+        liquidGradStart: '#8ACFDF',
+        liquidGradEnd: '#4C98B1',
+        waveColor: 'rgba(138, 207, 223, 0.55)',
+        glow: 'rgba(103, 175, 196, 0.2)'
+      },
       ocean_blue: {
-        liquidGradStart: '#38bdf8',
-        liquidGradEnd: '#0284c7',
-        waveColor: 'rgba(56, 189, 248, 0.6)',
-        glow: 'rgba(14, 165, 233, 0.3)'
+        liquidGradStart: '#8ACFDF',
+        liquidGradEnd: '#4C98B1',
+        waveColor: 'rgba(138, 207, 223, 0.55)',
+        glow: 'rgba(103, 175, 196, 0.2)'
       },
-      emerald_mint: {
-        liquidGradStart: '#34d399',
-        liquidGradEnd: '#059669',
-        waveColor: 'rgba(52, 211, 153, 0.6)',
-        glow: 'rgba(16, 185, 129, 0.3)'
+      sage_morning: {
+        liquidGradStart: '#A4D1C0',
+        liquidGradEnd: '#5E9B89',
+        waveColor: 'rgba(164, 209, 192, 0.55)',
+        glow: 'rgba(112, 169, 154, 0.2)'
       },
-      sunset_coral: {
-        liquidGradStart: '#fb7185',
-        liquidGradEnd: '#e11d48',
-        waveColor: 'rgba(251, 113, 133, 0.6)',
-        glow: 'rgba(244, 63, 94, 0.3)'
+      mint_glass: {
+        liquidGradStart: '#A4D1C0',
+        liquidGradEnd: '#5E9B89',
+        waveColor: 'rgba(164, 209, 192, 0.55)',
+        glow: 'rgba(112, 169, 154, 0.2)'
       },
-      midnight_obsidian: {
-        liquidGradStart: '#818cf8',
-        liquidGradEnd: '#4f46e5',
-        waveColor: 'rgba(129, 140, 248, 0.6)',
-        glow: 'rgba(99, 102, 241, 0.3)'
+      rose_water: {
+        liquidGradStart: '#E7B9BF',
+        liquidGradEnd: '#B87380',
+        waveColor: 'rgba(231, 185, 191, 0.55)',
+        glow: 'rgba(200, 137, 148, 0.2)'
+      },
+      rose_glass: {
+        liquidGradStart: '#E7B9BF',
+        liquidGradEnd: '#B87380',
+        waveColor: 'rgba(231, 185, 191, 0.55)',
+        glow: 'rgba(200, 137, 148, 0.2)'
+      },
+      warm_sand: {
+        liquidGradStart: '#9BC6CC',
+        liquidGradEnd: '#578B96',
+        waveColor: 'rgba(155, 198, 204, 0.55)',
+        glow: 'rgba(103, 151, 160, 0.2)'
+      },
+      midnight_pool: {
+        liquidGradStart: '#82C7D6',
+        liquidGradEnd: '#438A9F',
+        waveColor: 'rgba(130, 199, 214, 0.55)',
+        glow: 'rgba(118, 191, 208, 0.2)'
+      },
+      midnight_glass: {
+        liquidGradStart: '#82C7D6',
+        liquidGradEnd: '#438A9F',
+        waveColor: 'rgba(130, 199, 214, 0.55)',
+        glow: 'rgba(118, 191, 208, 0.2)'
       }
     };
-    return themes[this.theme] || themes.ocean_blue;
+    return themes[this.theme] || themes.ocean_mist;
   }
 
   render() {

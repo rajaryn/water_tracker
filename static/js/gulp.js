@@ -1,15 +1,27 @@
 /**
  * Water Gulp Visualizer, Drop Animation & Web Audio Sound Component
+ * Compliant with Theme Atmosphere System
  */
 
 export class WaterGulp {
   constructor(containerId, options = {}) {
     this.container = typeof containerId === 'string' ? document.getElementById(containerId) : containerId;
     this.volumeMl = options.volumeMl || 50;
+    this.theme = options.theme || 'ocean_mist';
     this.onTakeGulp = options.onTakeGulp || null;
     this.isDrinking = false;
     this.audioCtx = null;
 
+    this.render();
+  }
+
+  setVolume(volumeMl) {
+    this.volumeMl = volumeMl;
+    this.render();
+  }
+
+  updateTheme(theme) {
+    this.theme = theme;
     this.render();
   }
 
@@ -100,32 +112,34 @@ export class WaterGulp {
 
     this.container.innerHTML = `
       <div class="glass-card gulp-card">
-        <div class="glass-visual gulp-visual">
-          <svg viewBox="0 0 100 120" class="glass-svg gulp-svg">
-            <defs>
-              <linearGradient id="dropGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="#38bdf8" />
-                <stop offset="100%" stop-color="#0284c7" />
-              </linearGradient>
-            </defs>
+        <div class="glass-left">
+          <div class="glass-visual gulp-visual">
+            <svg viewBox="0 0 100 120" class="glass-svg gulp-svg" aria-label="Sip of water">
+              <defs>
+                <linearGradient id="gulpDropGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="var(--bottle-grad-start, #8ACFDF)" />
+                  <stop offset="100%" stop-color="var(--bottle-grad-end, #4C98B1)" />
+                </linearGradient>
+              </defs>
 
-            <!-- Splash Ripple Circle -->
-            <circle class="gulp-ripple" cx="50" cy="85" r="8" fill="none" stroke="#38bdf8" stroke-width="2" opacity="0" />
+              <!-- Splash Ripple Circle -->
+              <circle class="gulp-ripple" cx="50" cy="85" r="8" fill="none" stroke="var(--color-primary, #67AFC4)" stroke-width="2" opacity="0" />
 
-            <!-- Water Drop Graphic -->
-            <g class="gulp-drop">
-              <path d="M 50 20 Q 30 55 30 70 A 20 20 0 0 0 70 70 Q 70 55 50 20 Z" 
-                    fill="url(#dropGrad)" />
-              <ellipse cx="44" cy="55" rx="4" ry="8" fill="rgba(255,255,255,0.4)" transform="rotate(-20 44 55)" />
-            </g>
-          </svg>
+              <!-- Water Drop Graphic -->
+              <g class="gulp-drop">
+                <path d="M 50 20 Q 30 55 30 70 A 20 20 0 0 0 70 70 Q 70 55 50 20 Z" 
+                      fill="url(#gulpDropGrad)" />
+                <ellipse cx="44" cy="55" rx="4" ry="8" fill="rgba(255,255,255,0.4)" transform="rotate(-20 44 55)" />
+              </g>
+            </svg>
+          </div>
+          <div class="glass-details">
+            <span class="glass-amount">${this.volumeMl} ml</span>
+            <span class="glass-label">Sip of Water</span>
+          </div>
         </div>
-        <div class="glass-details">
-          <span class="glass-amount">${this.volumeMl} ml</span>
-          <span class="glass-label">Sip / Gulp of Water</span>
-        </div>
-        <button class="btn btn-secondary take-gulp-btn">
-          <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+        <button class="btn btn-secondary glass-action-btn take-gulp-btn">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
           <span>Take a Gulp</span>
         </button>
       </div>

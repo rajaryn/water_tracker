@@ -1,5 +1,6 @@
 /**
- * Hydration Tracker PWA Main Application Coordinator
+ * Hydration Companion PWA Main Application Coordinator
+ * Compliant with Updated Design Specification — Atmospheric Themes, Bottle-First Architecture
  */
 
 import { initDB, getLocalData, saveLocalData, addToSyncQueue, getSyncQueue, clearSyncQueue, deleteLocalData } from './db.js';
@@ -8,6 +9,44 @@ import { WaterBottle } from './bottle.js';
 import { WaterGlass } from './glass.js';
 import { WaterGulp } from './gulp.js';
 import { NotificationEngine } from './notifications.js';
+
+export const THEMES = [
+  {
+    id: 'ocean_mist',
+    name: 'Ocean Mist',
+    tag: 'Calm & Fresh (Default)',
+    swatchGradient: 'linear-gradient(135deg, #D9E7E8 50%, #67AFC4 50%)',
+    textColor: '#263B42'
+  },
+  {
+    id: 'sage_morning',
+    name: 'Sage Morning',
+    tag: 'Natural & Restorative',
+    swatchGradient: 'linear-gradient(135deg, #DDE4DA 50%, #70A99A 50%)',
+    textColor: '#293B36'
+  },
+  {
+    id: 'rose_water',
+    name: 'Rose Water',
+    tag: 'Soft & Warm',
+    swatchGradient: 'linear-gradient(135deg, #E7DCDD 50%, #C88994 50%)',
+    textColor: '#443238'
+  },
+  {
+    id: 'warm_sand',
+    name: 'Warm Sand',
+    tag: 'Earthy & Cozy',
+    swatchGradient: 'linear-gradient(135deg, #E5DED0 50%, #6797A0 50%)',
+    textColor: '#3E3930'
+  },
+  {
+    id: 'midnight_pool',
+    name: 'Midnight Pool',
+    tag: 'Atmospheric Dark',
+    swatchGradient: 'linear-gradient(135deg, #172A30 50%, #76BFD0 50%)',
+    textColor: '#E3ECEB'
+  }
+];
 
 class App {
   constructor() {
@@ -19,6 +58,7 @@ class App {
     this.glassWidget = null;
     this.gulpWidget = null;
     this.notificationEngine = new NotificationEngine();
+    this.activeTheme = 'ocean_mist';
 
     this.init();
   }
@@ -27,6 +67,7 @@ class App {
     await initDB();
     await this.registerServiceWorker();
     await this.loadState();
+    this.applyThemePreference();
 
     this.setupEventListeners();
     this.setupNetworkSync();
@@ -35,8 +76,37 @@ class App {
       this.showScreen('onboarding');
       this.initOnboarding();
     } else {
-      this.showScreen('home');
-      this.renderHomeScreen();
+      this.showScreen('today');
+      this.renderTodayScreen();
+    }
+  }
+
+  applyThemePreference() {
+    const savedTheme = localStorage.getItem('hc_theme') || (this.bottle ? this.bottle.theme : 'ocean_mist') || 'ocean_mist';
+    this.setTheme(savedTheme, false);
+  }
+
+  setTheme(themeId, save = true) {
+    const validTheme = THEMES.find(t => t.id === themeId) ? themeId : 'ocean_mist';
+    this.activeTheme = validTheme;
+    document.documentElement.setAttribute('data-theme', validTheme);
+
+    if (save) {
+      localStorage.setItem('hc_theme', validTheme);
+      if (this.bottle) {
+        this.bottle.theme = validTheme;
+        saveLocalData('bottle', { id: 'current_bottle', ...this.bottle });
+      }
+    }
+
+    if (this.bottleWidget && this.bottle) {
+      this.bottleWidget.update(this.bottle.current_volume_ml, this.bottle.capacity_ml, validTheme);
+    }
+    if (this.glassWidget) {
+      this.glassWidget.updateTheme(validTheme);
+    }
+    if (this.gulpWidget) {
+      this.gulpWidget.updateTheme(validTheme);
     }
   }
 
@@ -73,9 +143,9 @@ class App {
   }
 
   setupEventListeners() {
-    // Bottom Navigation
+    // Bottom Navigation (Today, History, Insights, You)
     document.querySelectorAll('.nav-item').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', () => {
         const targetScreen = btn.dataset.screen;
         if (targetScreen) {
           this.showScreen(targetScreen);
@@ -83,21 +153,13 @@ class App {
       });
     });
 
-    // Quick Drink Buttons
+    // Quick Drink Buttons (+100, +200, +250, +500)
     document.querySelectorAll('.btn-drink').forEach(btn => {
       btn.addEventListener('click', () => {
         const amount = parseInt(btn.dataset.amount, 10);
         if (amount) this.logDrink(amount, 'quick_add');
       });
     });
-
-    // Gulp Drink Button
-    const gulpBtn = document.getElementById('gulpDrinkBtn');
-    if (gulpBtn) {
-      gulpBtn.addEventListener('click', () => {
-        this.logDrink(50, 'gulp');
-      });
-    }
 
     // Custom Drink Button
     const customBtn = document.getElementById('customDrinkBtn');
@@ -116,39 +178,31 @@ class App {
     if (refillBtn) {
       refillBtn.addEventListener('click', () => this.logRefill());
     }
-
-    // Notification Opt-in Prompt Button
-    const notifPromptBtn = document.getElementById('enableNotifBtn');
-    if (notifPromptBtn) {
-      notifPromptBtn.addEventListener('click', async () => {
-        const granted = await this.notificationEngine.requestPermission();
-        if (granted) {
-          alert('Notifications enabled! Gentle reminders will be sent when you fall behind your target pacing.');
-          document.getElementById('notifPromptBanner').style.display = 'none';
-        }
-      });
-    }
   }
 
   showScreen(screenId) {
+    let mappedScreen = screenId;
+    if (screenId === 'home') mappedScreen = 'today';
+    if (screenId === 'stats') mappedScreen = 'insights';
+    if (screenId === 'settings') mappedScreen = 'you';
+
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
-    const targetEl = document.getElementById(`screen-${screenId}`);
+    const targetEl = document.getElementById(`screen-${mappedScreen}`);
     if (targetEl) targetEl.classList.add('active');
 
-    const navEl = document.querySelector(`.nav-item[data-screen="${screenId}"]`);
+    const navEl = document.querySelector(`.nav-item[data-screen="${mappedScreen}"]`) || 
+                  document.querySelector(`.nav-item[data-screen="${screenId}"]`);
     if (navEl) navEl.classList.add('active');
 
-    // Trigger screen-specific rendering
-    if (screenId === 'home') this.renderHomeScreen();
-    if (screenId === 'history') this.renderHistoryScreen();
-    if (screenId === 'stats') this.renderStatsScreen();
-    if (screenId === 'methodology') this.renderMethodologyScreen();
-    if (screenId === 'settings') this.renderSettingsScreen();
+    if (mappedScreen === 'today') this.renderTodayScreen();
+    if (mappedScreen === 'history') this.renderHistoryScreen();
+    if (mappedScreen === 'insights') this.renderInsightsScreen();
+    if (mappedScreen === 'you') this.renderYouScreen();
   }
 
-  // --- Onboarding Flow ---
+  // --- Onboarding Flow (Design Specification Section 23) ---
   initOnboarding() {
     let step = 1;
     const onboardState = {
@@ -157,7 +211,8 @@ class App {
       activity_level: 'moderately_active',
       environment: 'indoors',
       pregnancy_status: 'neither',
-      bottle_capacity_ml: 750
+      bottle_capacity_ml: 750,
+      bottle_theme: 'ocean_mist'
     };
 
     const renderStep = () => {
@@ -167,12 +222,12 @@ class App {
       if (step === 1) {
         card.innerHTML = `
           <div class="onboarding-card">
-            <h2 class="onboarding-title">Meet your hydration companion.</h2>
+            <h2 class="onboarding-title">Meet your water bottle.</h2>
             <p class="onboarding-subtitle">
-              Track your water intake like bringing a physical water bottle to life. Designed for adult health & research-based targets.
+              A calmer way to keep track of drinking water throughout your day.
             </p>
             <button class="btn btn-primary" id="onboardNext1" style="width:100%">
-              <span>Get Started</span>
+              <span>Let's set it up</span>
               <svg class="btn-icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
             </button>
           </div>
@@ -181,24 +236,24 @@ class App {
       } else if (step === 2) {
         card.innerHTML = `
           <div class="onboarding-card">
-            <h2 class="onboarding-title">Age & Sex</h2>
-            <p class="onboarding-subtitle">Research reference values adapt to physiological water needs.</p>
+            <h2 class="onboarding-title">About You</h2>
+            <p class="onboarding-subtitle">Hydration reference values adapt naturally to your physiology.</p>
             
             <div class="form-group">
-              <label class="form-label">How old are you? (18+)</label>
+              <label class="form-label" for="onboardAge">Age (18+)</label>
               <input type="number" id="onboardAge" class="input-control" value="${onboardState.age}" min="18" max="100" />
             </div>
 
             <div class="form-group">
-              <label class="form-label">What is your biological sex?</label>
+              <label class="form-label">Biological Sex</label>
               <div class="option-cards-grid">
-                <div class="option-card ${onboardState.sex === 'male' ? 'selected' : ''}" data-val="male">
-                  <div class="option-card-title">Male</div>
-                  <div class="option-card-desc">IOM 3.7L Ref</div>
-                </div>
                 <div class="option-card ${onboardState.sex === 'female' ? 'selected' : ''}" data-val="female">
                   <div class="option-card-title">Female</div>
-                  <div class="option-card-desc">IOM 2.7L Ref</div>
+                  <div class="option-card-desc">IOM 2.7L Baseline</div>
+                </div>
+                <div class="option-card ${onboardState.sex === 'male' ? 'selected' : ''}" data-val="male">
+                  <div class="option-card-title">Male</div>
+                  <div class="option-card-desc">IOM 3.7L Baseline</div>
                 </div>
               </div>
             </div>
@@ -220,49 +275,99 @@ class App {
 
         document.getElementById('onboardNext2').onclick = () => {
           const ageInput = parseInt(document.getElementById('onboardAge').value, 10);
-          onboardState.age = ageInput || 25;
+          onboardState.age = ageInput || 28;
           step = 3;
           renderStep();
         };
       } else if (step === 3) {
         card.innerHTML = `
           <div class="onboarding-card">
-            <h2 class="onboarding-title">Activity & Environment</h2>
-            <p class="onboarding-subtitle">Physical movement and outdoor exposure increase fluid loss.</p>
+            <h2 class="onboarding-title">Your Day</h2>
+            <p class="onboarding-subtitle">How active are your typical days?</p>
 
             <div class="form-group">
-              <label class="form-label">Daily Activity</label>
-              <select id="onboardActivity" class="input-control">
-                <option value="sedentary">Mostly Sedentary (Sitting, little exercise)</option>
-                <option value="lightly_active" selected>Lightly Active (Walking, occasional movement)</option>
-                <option value="moderately_active">Moderately Active (Regular exercise)</option>
-                <option value="highly_active">Highly Active (Intense workouts / physical labor)</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Typical Day Environment</label>
-              <select id="onboardEnv" class="input-control">
-                <option value="indoors" selected>Mostly Indoors (AC / Heated)</option>
-                <option value="mixed">Mixed Indoor & Outdoor</option>
-                <option value="outdoors">Mostly Outdoors (Sun / Heat)</option>
-              </select>
+              <div class="option-cards-grid" style="grid-template-columns:1fr;">
+                <div class="option-card ${onboardState.activity_level === 'sedentary' ? 'selected' : ''}" data-act="sedentary">
+                  <div class="option-card-title">Mostly sitting</div>
+                  <div class="option-card-desc">Desk work, light daily movement</div>
+                </div>
+                <div class="option-card ${onboardState.activity_level === 'lightly_active' ? 'selected' : ''}" data-act="lightly_active">
+                  <div class="option-card-title">A little active</div>
+                  <div class="option-card-desc">Regular walking and casual movement</div>
+                </div>
+                <div class="option-card ${onboardState.activity_level === 'moderately_active' ? 'selected' : ''}" data-act="moderately_active">
+                  <div class="option-card-title">Fairly active</div>
+                  <div class="option-card-desc">Regular exercise or active lifestyle</div>
+                </div>
+                <div class="option-card ${onboardState.activity_level === 'highly_active' ? 'selected' : ''}" data-act="highly_active">
+                  <div class="option-card-title">Very active</div>
+                  <div class="option-card-desc">Intense daily training or physical labor</div>
+                </div>
+              </div>
             </div>
 
             <button class="btn btn-primary" id="onboardNext3" style="width:100%">
-              <span>Bottle Setup</span>
+              <span>Next: Environment</span>
               <svg class="btn-icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
             </button>
           </div>
         `;
 
+        card.querySelectorAll('.option-card').forEach(opt => {
+          opt.onclick = () => {
+            card.querySelectorAll('.option-card').forEach(o => o.classList.remove('selected'));
+            opt.classList.add('selected');
+            onboardState.activity_level = opt.dataset.act;
+          };
+        });
+
         document.getElementById('onboardNext3').onclick = () => {
-          onboardState.activity_level = document.getElementById('onboardActivity').value;
-          onboardState.environment = document.getElementById('onboardEnv').value;
           step = 4;
           renderStep();
         };
       } else if (step === 4) {
+        card.innerHTML = `
+          <div class="onboarding-card">
+            <h2 class="onboarding-title">Environment</h2>
+            <p class="onboarding-subtitle">Where do you typically spend most of your day?</p>
+
+            <div class="form-group">
+              <div class="option-cards-grid" style="grid-template-columns:1fr;">
+                <div class="option-card ${onboardState.environment === 'indoors' ? 'selected' : ''}" data-env="indoors">
+                  <div class="option-card-title">Mostly indoors</div>
+                  <div class="option-card-desc">Climate-controlled indoor space</div>
+                </div>
+                <div class="option-card ${onboardState.environment === 'mixed' ? 'selected' : ''}" data-env="mixed">
+                  <div class="option-card-title">Mixed indoor & outdoor</div>
+                  <div class="option-card-desc">Splitting time inside and outside</div>
+                </div>
+                <div class="option-card ${onboardState.environment === 'outdoors' ? 'selected' : ''}" data-env="outdoors">
+                  <div class="option-card-title">Mostly outdoors</div>
+                  <div class="option-card-desc">Warm or direct sun exposure</div>
+                </div>
+              </div>
+            </div>
+
+            <button class="btn btn-primary" id="onboardNext4" style="width:100%">
+              <span>Choose Your Bottle</span>
+              <svg class="btn-icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+          </div>
+        `;
+
+        card.querySelectorAll('.option-card').forEach(opt => {
+          opt.onclick = () => {
+            card.querySelectorAll('.option-card').forEach(o => o.classList.remove('selected'));
+            opt.classList.add('selected');
+            onboardState.environment = opt.dataset.env;
+          };
+        });
+
+        document.getElementById('onboardNext4').onclick = () => {
+          step = 5;
+          renderStep();
+        };
+      } else if (step === 5) {
         const isCustomInitially = ![500, 750, 1000, 1500].includes(onboardState.bottle_capacity_ml);
         card.innerHTML = `
           <div class="onboarding-card">
@@ -272,8 +377,8 @@ class App {
             <div class="option-cards-grid bottle-cap-grid">
               <div class="option-card ${onboardState.bottle_capacity_ml === 500 && !isCustomInitially ? 'selected' : ''}" data-cap="500">500 ml</div>
               <div class="option-card ${onboardState.bottle_capacity_ml === 750 && !isCustomInitially ? 'selected' : ''}" data-cap="750">750 ml</div>
-              <div class="option-card ${onboardState.bottle_capacity_ml === 1000 && !isCustomInitially ? 'selected' : ''}" data-cap="1000">1.0 L (1000ml)</div>
-              <div class="option-card ${onboardState.bottle_capacity_ml === 1500 && !isCustomInitially ? 'selected' : ''}" data-cap="1500">1.5 L (1500ml)</div>
+              <div class="option-card ${onboardState.bottle_capacity_ml === 1000 && !isCustomInitially ? 'selected' : ''}" data-cap="1000">1.0 L</div>
+              <div class="option-card ${onboardState.bottle_capacity_ml === 1500 && !isCustomInitially ? 'selected' : ''}" data-cap="1500">1.5 L</div>
               <div class="option-card bottle-cap-custom-card ${isCustomInitially ? 'selected' : ''}" data-cap="custom">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                 <span>Custom Quantity</span>
@@ -288,9 +393,9 @@ class App {
               </div>
             </div>
 
-            <button class="btn btn-primary" id="onboardFinish" style="width:100%">
-              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              <span>Complete Setup</span>
+            <button class="btn btn-primary" id="onboardNext5" style="width:100%">
+              <span>Choose Atmosphere</span>
+              <svg class="btn-icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
             </button>
           </div>
         `;
@@ -323,13 +428,11 @@ class App {
         if (customInput) {
           customInput.oninput = () => {
             const val = parseInt(customInput.value, 10);
-            if (val > 0) {
-              onboardState.bottle_capacity_ml = val;
-            }
+            if (val > 0) onboardState.bottle_capacity_ml = val;
           };
         }
 
-        document.getElementById('onboardFinish').onclick = async () => {
+        document.getElementById('onboardNext5').onclick = () => {
           if (isCustom) {
             const val = parseInt(customInput.value, 10);
             if (!val || val <= 0) {
@@ -337,13 +440,45 @@ class App {
               customInput.focus();
               return;
             }
-            if (val > 10000) {
-              alert('Please enter a realistic bottle capacity (up to 10,000 ml).');
-              customInput.focus();
-              return;
-            }
             onboardState.bottle_capacity_ml = val;
           }
+          step = 6;
+          renderStep();
+        };
+      } else if (step === 6) {
+        // Screen 6: Choose Your Atmosphere (Section 23)
+        card.innerHTML = `
+          <div class="onboarding-card">
+            <h2 class="onboarding-title">Choose Atmosphere</h2>
+            <p class="onboarding-subtitle">Select your preferred calming visual environment.</p>
+
+            <div class="theme-picker-grid">
+              ${THEMES.map(t => `
+                <div class="theme-card ${onboardState.bottle_theme === t.id ? 'selected' : ''}" data-theme-id="${t.id}">
+                  <div class="theme-swatch-circle" style="background:${t.swatchGradient};"></div>
+                  <div class="theme-card-name">${t.name}</div>
+                  <div class="theme-card-tag">${t.tag}</div>
+                </div>
+              `).join('')}
+            </div>
+
+            <button class="btn btn-primary" id="onboardFinish" style="width:100%">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span>Your bottle is ready</span>
+            </button>
+          </div>
+        `;
+
+        card.querySelectorAll('.theme-card').forEach(tCard => {
+          tCard.onclick = () => {
+            card.querySelectorAll('.theme-card').forEach(c => c.classList.remove('selected'));
+            tCard.classList.add('selected');
+            onboardState.bottle_theme = tCard.dataset.themeId;
+            this.setTheme(tCard.dataset.themeId, false);
+          };
+        });
+
+        document.getElementById('onboardFinish').onclick = async () => {
           await this.completeOnboarding(onboardState);
         };
       }
@@ -367,7 +502,7 @@ class App {
       capacity_ml: state.bottle_capacity_ml,
       current_volume_ml: state.bottle_capacity_ml,
       name: 'My Water Bottle',
-      theme: 'ocean_blue'
+      theme: state.bottle_theme || 'ocean_mist'
     };
     this.target = {
       id: 'tgt_' + Date.now(),
@@ -382,27 +517,34 @@ class App {
     await saveLocalData('bottle', { id: 'current_bottle', ...this.bottle });
     await saveLocalData('hydration_target', { id: 'current_target', ...this.target });
 
-    // Sync with server if online
+    this.setTheme(this.bottle.theme, true);
     this.syncOfflineQueue();
 
-    this.showScreen('home');
-    this.renderHomeScreen();
+    this.showScreen('today');
+    this.renderTodayScreen();
   }
 
-  // --- Home Screen & Core Interactions ---
-  renderHomeScreen() {
+  // --- Today Screen & Core Physical Bottle Interactions ---
+  renderTodayScreen() {
     if (!this.user || !this.bottle || !this.target) return;
+
+    // Time-aware friendly greeting (Section 15)
+    const hour = new Date().getHours();
+    const greetingEl = document.getElementById('todayGreeting');
+    if (greetingEl) {
+      greetingEl.textContent = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+    }
 
     // Render Hero Water Bottle Widget
     if (!this.bottleWidget) {
       this.bottleWidget = new WaterBottle('bottleWidgetContainer', {
         capacityMl: this.bottle.capacity_ml,
         currentVolumeMl: this.bottle.current_volume_ml,
-        theme: this.bottle.theme,
+        theme: this.bottle.theme || this.activeTheme,
         onRefill: () => this.logRefill()
       });
     } else {
-      this.bottleWidget.update(this.bottle.current_volume_ml, this.bottle.capacity_ml, this.bottle.theme);
+      this.bottleWidget.update(this.bottle.current_volume_ml, this.bottle.capacity_ml, this.bottle.theme || this.activeTheme);
     }
 
     // Render Gulp Vessel Widget
@@ -450,14 +592,14 @@ class App {
     let actualDrinkMl = amountMl;
     const isExternalVessel = (source === 'glass' || source === 'gulp' || source === 'external');
 
-    // Only check & decrement physical bottle volume if drinking directly from bottle!
+    // Only decrement physical bottle volume if drinking directly from the bottle
     if (!isExternalVessel) {
       if (this.bottle.current_volume_ml < amountMl) {
         if (this.bottle.current_volume_ml === 0) {
-          alert('Your physical bottle is empty! Tap the bottle or "Refill Bottle" first.');
+          alert('Your physical bottle is empty. Tap the bottle or "Refill bottle" first.');
           return;
         }
-        const choice = confirm(`Your bottle only has ${this.bottle.current_volume_ml} ml left. Log ${this.bottle.current_volume_ml} ml and prompt refill?`);
+        const choice = confirm(`Your bottle only has ${this.bottle.current_volume_ml} ml left. Log ${this.bottle.current_volume_ml} ml?`);
         if (choice) {
           actualDrinkMl = this.bottle.current_volume_ml;
         } else {
@@ -484,10 +626,9 @@ class App {
 
     this.todayEvents.push(drinkEvent);
 
-    // Haptic feedback if supported
-    if ('vibrate' in navigator) navigator.vibrate(40);
+    if ('vibrate' in navigator) navigator.vibrate(30);
 
-    this.renderHomeScreen();
+    this.renderTodayScreen();
     this.syncOfflineQueue();
   }
 
@@ -509,13 +650,13 @@ class App {
     await saveLocalData('refill_events', refillEvent);
     await addToSyncQueue({ type: 'refill_event', payload: refillEvent });
 
-    if ('vibrate' in navigator) navigator.vibrate([30, 50, 30]);
+    if ('vibrate' in navigator) navigator.vibrate([25, 40, 25]);
 
-    this.renderHomeScreen();
+    this.renderTodayScreen();
     this.syncOfflineQueue();
   }
 
-  // --- History Screen ---
+  // --- History Screen (Section 20) ---
   async renderHistoryScreen() {
     const container = document.getElementById('historyContainer');
     if (!container) return;
@@ -524,11 +665,10 @@ class App {
     const allRefills = await getLocalData('refill_events') || [];
 
     if (allDrinks.length === 0 && allRefills.length === 0) {
-      container.innerHTML = `<div class="history-day-card" style="text-align:center;">No drinking events logged yet today!</div>`;
+      container.innerHTML = `<div class="history-day-card" style="text-align:center; color:var(--color-text-muted);">No drinking events logged yet today.</div>`;
       return;
     }
 
-    // Group events by ISO date
     const grouped = {};
     allDrinks.forEach(d => {
       const dateKey = d.timestamp ? d.timestamp.split('T')[0] : 'Today';
@@ -554,24 +694,27 @@ class App {
         <div class="history-day-card">
           <div class="history-day-header">
             <span class="history-date">${dateKey}</span>
-            <span class="history-day-total">Total: ${group.totalMl} ml</span>
+            <span class="history-day-total">${group.totalMl} ml logged</span>
           </div>
           <div class="history-items-list">
-            ${group.items.map(item => `
-              <div class="history-item">
-                <div style="display:flex; align-items:center;">
-                  <span class="history-item-icon">
-                    ${item.type === 'drink' 
-                      ? '<svg class="history-svg-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>' 
-                      : '<svg class="history-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>'}
+            ${group.items.map(item => {
+              const friendlySource = item.source === 'glass' ? 'Glass' : item.source === 'gulp' ? 'Sip' : item.source === 'custom' ? 'Custom' : 'Quick add';
+              return `
+                <div class="history-item">
+                  <div style="display:flex; align-items:center;">
+                    <span class="history-item-icon">
+                      ${item.type === 'drink' 
+                        ? '<svg class="history-svg-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>' 
+                        : '<svg class="history-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>'}
+                    </span>
+                    <span>${item.type === 'drink' ? `+${item.amount_ml} ml (${friendlySource})` : `Refilled bottle (${item.amount_added_ml} ml)`}</span>
+                  </div>
+                  <span style="color:var(--color-text-subtle); font-size:0.8rem;">
+                    ${item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                   </span>
-                  <span>${item.type === 'drink' ? `Drank ${item.amount_ml} ml` : `Refilled bottle (+${item.amount_added_ml} ml)`}</span>
                 </div>
-                <span style="color:var(--color-text-subtle); font-size:0.8rem;">
-                  ${item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                </span>
-              </div>
-            `).join('')}
+              `;
+            }).join('')}
           </div>
         </div>
       `;
@@ -580,15 +723,14 @@ class App {
     container.innerHTML = html;
   }
 
-  // --- Statistics Screen ---
-  async renderStatsScreen() {
+  // --- Insights Screen (Section 21 & 22) ---
+  async renderInsightsScreen() {
     const container = document.getElementById('statsContainer');
     if (!container) return;
 
     const allDrinks = await getLocalData('drink_events') || [];
     const targetMl = this.target ? this.target.target_ml : 2500;
 
-    // Group by last 7 days
     const today = new Date();
     const chartBars = [];
     let last7Total = 0;
@@ -618,39 +760,22 @@ class App {
     }
 
     const avg7Days = Math.round(last7Total / 7);
-    const completionPct = Math.round((daysMetTarget / 7) * 100);
-
-    const consumedTodayMl = this.todayEvents.reduce((sum, ev) => sum + ev.amount_ml, 0);
-    const todayPct = Math.min(100, Math.round((consumedTodayMl / targetMl) * 100));
-    const circumference = 2 * Math.PI * 24;
-    const strokeOffset = circumference - (circumference * (todayPct / 100));
+    const recommendation = this.user ? calculateHydrationTarget(this.user) : null;
 
     container.innerHTML = `
-      <div class="progress-ring-container" style="margin-bottom:20px;">
-        <svg class="ring-svg" viewBox="0 0 60 60">
-          <circle class="ring-bg" cx="30" cy="30" r="24" stroke-width="6" fill="none" />
-          <circle class="ring-fill" cx="30" cy="30" r="24" stroke-width="6" fill="none" stroke-linecap="round"
-                  style="stroke-dasharray:${circumference}; stroke-dashoffset:${strokeOffset};" />
-        </svg>
-        <div class="ring-info">
-          <div class="ring-pct-title">${todayPct}%</div>
-          <div class="ring-subtitle">Today's Target Progress</div>
-        </div>
-      </div>
-
       <div class="stats-grid">
         <div class="stat-metric-card">
           <div class="stat-value">${(avg7Days / 1000).toFixed(2)} L</div>
-          <div class="stat-label">7-Day Average</div>
+          <div class="stat-label">7-day average</div>
         </div>
         <div class="stat-metric-card">
-          <div class="stat-value">${completionPct}%</div>
-          <div class="stat-label">Goal Completion Rate</div>
+          <div class="stat-value">${daysMetTarget} / 7</div>
+          <div class="stat-label">Days reached</div>
         </div>
       </div>
 
       <div class="bar-chart-container">
-        <h3 style="font-size:0.95rem; font-weight:700; margin-bottom:12px;">7-Day Hydration Pacing</h3>
+        <div class="chart-header">7-Day Hydration Rhythm</div>
         <div class="chart-bars">
           ${chartBars.map(b => `
             <div class="chart-bar-col">
@@ -660,67 +785,57 @@ class App {
           `).join('')}
         </div>
       </div>
+
+      ${recommendation ? `
+        <div class="transparency-card">
+          <div class="transparency-title">Why this amount?</div>
+          <p style="font-size:0.88rem; color:var(--color-text-muted); line-height:1.5; margin-bottom:12px;">
+            Your daily target (${recommendation.target_l} L) is tailored to your body and daily environment based on reference standards:
+          </p>
+          <ul class="breakdown-list">
+            ${recommendation.adjustments_breakdown.map(adj => `
+              <li class="breakdown-item">
+                <div>
+                  <div class="breakdown-label">${adj.factor}</div>
+                  <div class="breakdown-desc">${adj.details}</div>
+                </div>
+                <span class="breakdown-val">${adj.change}</span>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      ` : ''}
     `;
   }
 
-  // --- "Why this target?" Methodology Screen ---
-  renderMethodologyScreen() {
-    const container = document.getElementById('methodologyContainer');
-    if (!container || !this.user) return;
-
-    const recommendation = calculateHydrationTarget(this.user);
-
-    container.innerHTML = `
-      <div class="transparency-card">
-        <h2 class="transparency-title">Why this target?</h2>
-        <p style="font-size:1.8rem; font-weight:800; color:var(--color-primary-light); margin:8px 0;">
-          ${recommendation.target_l} L / day
-        </p>
-        <p style="font-size:0.85rem; color:var(--color-text-muted); line-height:1.5;">
-          ${recommendation.disclaimer}
-        </p>
-      </div>
-
-      <div class="transparency-card">
-        <h3 style="font-size:1rem; font-weight:700; margin-bottom:10px;">Target Calculation Breakdown</h3>
-        <ul class="breakdown-list">
-          ${recommendation.adjustments_breakdown.map(adj => `
-            <li class="breakdown-item">
-              <div>
-                <div class="breakdown-label">${adj.factor}</div>
-                <div class="breakdown-desc">${adj.details}</div>
-              </div>
-              <span class="breakdown-val">${adj.change}</span>
-            </li>
-          `).join('')}
-        </ul>
-      </div>
-
-      <div class="transparency-card">
-        <h3 style="font-size:1rem; font-weight:700; margin-bottom:8px;">Scientific References</h3>
-        <p style="font-size:0.85rem; color:var(--color-text-muted); line-height:1.5; margin-bottom:10px;">
-          Primary dietary reference values used by this system:
-        </p>
-        <ul style="font-size:0.8rem; color:var(--color-text-muted); padding-left:18px; line-height:1.6;">
-          <li><strong>Institute of Medicine (IOM / National Academies)</strong>: Dietary Reference Intakes for Water (Men 3.7L, Women 2.7L total water).</li>
-          <li><strong>EFSA (European Food Safety Authority)</strong>: DRVs for Water Intake.</li>
-          <li><strong>WHO Guidelines</strong>: Physical workload and environmental fluid loss adjustments.</li>
-        </ul>
-      </div>
-    `;
-  }
-
-  // --- Settings Screen ---
-  renderSettingsScreen() {
+  // --- You / Settings Screen (Section 24) ---
+  renderYouScreen() {
     const container = document.getElementById('settingsContainer');
     if (!container || !this.bottle) return;
 
     container.innerHTML = `
       <div class="transparency-card">
-        <h3 style="font-size:1rem; font-weight:700; margin-bottom:12px;">Bottle Configuration</h3>
+        <h3 class="transparency-title">Choose Atmosphere</h3>
+        <p style="font-size:0.82rem; color:var(--color-text-muted); margin-bottom:14px;">
+          Change the complete visual environment around your bottle.
+        </p>
+
+        <div class="theme-picker-grid">
+          ${THEMES.map(t => `
+            <div class="theme-card ${this.activeTheme === t.id ? 'selected' : ''}" data-theme-id="${t.id}">
+              <div class="theme-swatch-circle" style="background:${t.swatchGradient};"></div>
+              <div class="theme-card-name">${t.name}</div>
+              <div class="theme-card-tag">${t.tag}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="transparency-card" style="margin-top:14px;">
+        <h3 class="transparency-title">Bottle Configuration</h3>
         
         <div class="form-group">
-          <label class="form-label">Bottle Capacity (ml)</label>
+          <label class="form-label" for="settingBottleCap">Bottle Capacity (ml)</label>
           <div class="setting-cap-presets">
             <button type="button" class="setting-cap-preset ${this.bottle.capacity_ml === 400 ? 'active' : ''}" data-cap="400">400 ml</button>
             <button type="button" class="setting-cap-preset ${this.bottle.capacity_ml === 500 ? 'active' : ''}" data-cap="500">500 ml</button>
@@ -734,30 +849,17 @@ class App {
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Bottle Color Theme</label>
-          <select id="settingBottleTheme" class="input-control">
-            <option value="ocean_blue" ${this.bottle.theme === 'ocean_blue' ? 'selected' : ''}>Ocean Blue</option>
-            <option value="emerald_mint" ${this.bottle.theme === 'emerald_mint' ? 'selected' : ''}>Emerald Mint</option>
-            <option value="sunset_coral" ${this.bottle.theme === 'sunset_coral' ? 'selected' : ''}>Sunset Coral</option>
-            <option value="midnight_obsidian" ${this.bottle.theme === 'midnight_obsidian' ? 'selected' : ''}>Midnight Obsidian</option>
-          </select>
-        </div>
-
-        <button class="btn btn-primary" id="saveBottleSettingsBtn" style="width:100%;">Save Bottle Settings</button>
+        <button class="btn btn-primary" id="saveBottleSettingsBtn" style="width:100%;">Save Bottle Capacity</button>
       </div>
 
-      <div class="transparency-card" style="margin-top:16px;">
-        <h3 style="font-size:1rem; font-weight:700; margin-bottom:12px;">Hydration Reminders</h3>
-        <p style="font-size:0.8rem; color:var(--color-text-muted); margin-bottom:12px;">
-          Receive gentle notifications when falling behind your expected daily hydration pacing.
-        </p>
+      <div class="transparency-card" style="margin-top:14px;">
+        <h3 class="transparency-title">Preferences</h3>
         
-        <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(15,23,42,0.6); padding:12px 16px; border-radius:var(--radius-md); border:1px solid var(--color-surface-border);">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0;">
           <div>
-            <div style="font-weight:700; font-size:0.9rem;">Enable Gentle Reminders</div>
+            <div style="font-weight:700; font-size:0.9rem;">Gentle Reminders</div>
             <div style="font-size:0.75rem; color:var(--color-text-subtle);" id="notifStatusText">
-              Status: ${this.notificationEngine.getPermissionState() === 'granted' && this.notificationEngine.enabled ? 'Active' : 'Disabled'}
+              ${this.notificationEngine.getPermissionState() === 'granted' && this.notificationEngine.enabled ? 'Active' : 'Disabled'}
             </div>
           </div>
           <label class="toggle-switch">
@@ -767,22 +869,29 @@ class App {
         </div>
       </div>
 
-      <div class="transparency-card" style="margin-top:16px;">
-        <h3 style="font-size:1rem; font-weight:700; margin-bottom:12px;">Data Management</h3>
-        <button class="btn btn-secondary" id="exportDataBtn" style="width:100%; margin-bottom:10px;">Export Data (JSON)</button>
-        <button class="btn btn-secondary" id="resetDataBtn" style="width:100%; color:#ef4444; border-color:rgba(239,68,68,0.3);">Reset Local Data</button>
+      <div class="transparency-card" style="margin-top:14px;">
+        <h3 class="transparency-title">Data Management</h3>
+        <button class="btn btn-secondary" id="exportDataBtn" style="width:100%; margin-bottom:8px;">Export Data (JSON)</button>
+        <button class="btn btn-secondary" id="resetDataBtn" style="width:100%; color:#C88994; border-color:rgba(200, 137, 148, 0.4);">Reset Local Data</button>
       </div>
     `;
 
-    // Preset buttons in settings
+    // Theme cards live click handler
+    container.querySelectorAll('.theme-card').forEach(tCard => {
+      tCard.onclick = () => {
+        container.querySelectorAll('.theme-card').forEach(c => c.classList.remove('selected'));
+        tCard.classList.add('selected');
+        this.setTheme(tCard.dataset.themeId, true);
+      };
+    });
+
+    // Presets handler
     const capInput = document.getElementById('settingBottleCap');
     const presetBtns = container.querySelectorAll('.setting-cap-preset');
     presetBtns.forEach(btn => {
       btn.onclick = () => {
         const capVal = btn.dataset.cap;
-        if (capInput) {
-          capInput.value = capVal;
-        }
+        if (capInput) capInput.value = capVal;
         presetBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
       };
@@ -801,6 +910,7 @@ class App {
       };
     }
 
+    // Notification toggle
     const notifToggle = document.getElementById('settingNotifToggle');
     const notifStatusText = document.getElementById('notifStatusText');
     if (notifToggle) {
@@ -809,23 +919,22 @@ class App {
           const granted = await this.notificationEngine.requestPermission();
           if (granted) {
             this.notificationEngine.enabled = true;
-            if (notifStatusText) notifStatusText.textContent = 'Status: Active';
+            if (notifStatusText) notifStatusText.textContent = 'Active';
           } else {
             notifToggle.checked = false;
             this.notificationEngine.enabled = false;
             alert('Notification permission was not granted by your browser.');
-            if (notifStatusText) notifStatusText.textContent = 'Status: Disabled';
+            if (notifStatusText) notifStatusText.textContent = 'Disabled';
           }
         } else {
           this.notificationEngine.enabled = false;
-          if (notifStatusText) notifStatusText.textContent = 'Status: Disabled';
+          if (notifStatusText) notifStatusText.textContent = 'Disabled';
         }
       };
     }
 
     document.getElementById('saveBottleSettingsBtn').onclick = async () => {
       const cap = parseInt(document.getElementById('settingBottleCap').value, 10);
-      const theme = document.getElementById('settingBottleTheme').value;
       if (!cap || cap <= 0) {
         alert('Please enter a valid bottle capacity in ml (e.g. 400).');
         return;
@@ -836,12 +945,11 @@ class App {
       }
 
       this.bottle.capacity_ml = cap;
-      this.bottle.theme = theme;
       if (this.bottle.current_volume_ml > cap) this.bottle.current_volume_ml = cap;
 
       await saveLocalData('bottle', { id: 'current_bottle', ...this.bottle });
-      alert('Bottle settings saved!');
-      this.renderHomeScreen();
+      alert('Bottle capacity saved!');
+      this.renderTodayScreen();
     };
 
     document.getElementById('exportDataBtn').onclick = async () => {
@@ -852,7 +960,7 @@ class App {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'hydration_tracker_backup.json';
+      a.download = 'hydration_companion_backup.json';
       a.click();
     };
 

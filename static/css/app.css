@@ -1,38 +1,183 @@
 /* ==========================================================================
-   Mobile-First Hydration Tracker Design System
+   Design Specification — Hydration Companion PWA
+   Atmospheric Themes, Bottle-First Tactile Architecture
    ========================================================================== */
 
-:root {
-  --color-bg: #0f172a;
-  --color-surface: #1e293b;
-  --color-surface-card: rgba(30, 41, 59, 0.7);
-  --color-surface-border: rgba(255, 255, 255, 0.1);
-  --color-primary: #0ea5e9;
-  --color-primary-hover: #0284c7;
-  --color-primary-light: #38bdf8;
-  --color-accent: #06b6d4;
-  --color-text-main: #f8fafc;
-  --color-text-muted: #94a3b8;
-  --color-text-subtle: #64748b;
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
+/* --------------------------------------------------------------------------
+   THEME 1 — Ocean Mist (Default)
+   -------------------------------------------------------------------------- */
+:root, [data-theme="ocean_mist"] {
+  --color-bg: #D9E7E8;
+  --color-bg-deep: #C5D9DC;
+  --color-surface: #E5EFEE;
+  --color-surface-raised: #EDF3F0;
+  --color-surface-card: #E5EFEE;
+  --color-surface-border: #C4D4D6;
+  --color-surface-subtle: #D2E3E5;
+
+  --color-primary: #67AFC4;
+  --color-primary-hover: #3E8198;
+  --color-primary-light: #8ACFDF;
+  --color-primary-subtle: #C0E2EB;
+  --color-deep-water: #3E8198;
+  --color-soft-water: #B9DDE5;
+
+  --color-accent: #7EAE91;
+  --color-text-main: #263B42;
+  --color-text-muted: #5D737A;
+  --color-text-subtle: #809298;
+  --color-border: #C4D4D6;
+  --color-success: #7EAE91;
+  --color-warning: #DDA35D;
+
+  --bottle-grad-start: #8ACFDF;
+  --bottle-grad-end: #4C98B1;
+  --bottle-wave: rgba(138, 207, 223, 0.55);
+  --ambient-glow: rgba(103, 175, 196, 0.25);
+
   --radius-sm: 8px;
-  --radius-md: 16px;
-  --radius-lg: 24px;
-  --shadow-card: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-  --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --shadow-subtle: 0 2px 8px rgba(38, 59, 66, 0.04);
+  --shadow-card: 0 4px 18px rgba(38, 59, 66, 0.06);
+
+  --font-family: -apple-system, BlinkMacSystemFont, "Plus Jakarta Sans", "DM Sans", "Nunito Sans", system-ui, Roboto, sans-serif;
 }
 
-[data-theme="light"] {
-  --color-bg: #f1f5f9;
-  --color-surface: #ffffff;
-  --color-surface-card: rgba(255, 255, 255, 0.85);
-  --color-surface-border: rgba(0, 0, 0, 0.08);
-  --color-text-main: #0f172a;
-  --color-text-muted: #475569;
-  --color-text-subtle: #94a3b8;
+/* --------------------------------------------------------------------------
+   THEME 2 — Sage Morning
+   -------------------------------------------------------------------------- */
+[data-theme="sage_morning"] {
+  --color-bg: #DDE4DA;
+  --color-bg-deep: #CBD6C8;
+  --color-surface: #E8ECE2;
+  --color-surface-raised: #F0F1E8;
+  --color-surface-card: #E8ECE2;
+  --color-surface-border: #C8D2C8;
+  --color-surface-subtle: #D6DFD3;
+
+  --color-primary: #70A99A;
+  --color-primary-hover: #4D8175;
+  --color-primary-light: #A4D1C0;
+  --color-primary-subtle: #C6E2D8;
+  --color-deep-water: #4D8175;
+  --color-soft-water: #B8D5CA;
+
+  --color-accent: #729D7F;
+  --color-text-main: #293B36;
+  --color-text-muted: #60736C;
+  --color-text-subtle: #84918C;
+  --color-border: #C8D2C8;
+  --color-success: #729D7F;
+
+  --bottle-grad-start: #A4D1C0;
+  --bottle-grad-end: #5E9B89;
+  --bottle-wave: rgba(164, 209, 192, 0.55);
+  --ambient-glow: rgba(112, 169, 154, 0.25);
 }
 
+/* --------------------------------------------------------------------------
+   THEME 3 — Rose Water
+   -------------------------------------------------------------------------- */
+[data-theme="rose_water"] {
+  --color-bg: #E7DCDD;
+  --color-bg-deep: #D9CBCD;
+  --color-surface: #EEE6E3;
+  --color-surface-raised: #F4ECE8;
+  --color-surface-card: #EEE6E3;
+  --color-surface-border: #D8C9C9;
+  --color-surface-subtle: #E0D3D5;
+
+  --color-primary: #C88994;
+  --color-primary-hover: #9D626F;
+  --color-primary-light: #E7B9BF;
+  --color-primary-subtle: #F1D4D8;
+  --color-deep-water: #9D626F;
+  --color-soft-water: #E2B8BD;
+
+  --color-accent: #7FA18B;
+  --color-text-main: #443238;
+  --color-text-muted: #79636A;
+  --color-text-subtle: #99858A;
+  --color-border: #D8C9C9;
+  --color-success: #7FA18B;
+
+  --bottle-grad-start: #E7B9BF;
+  --bottle-grad-end: #B87380;
+  --bottle-wave: rgba(231, 185, 191, 0.55);
+  --ambient-glow: rgba(200, 137, 148, 0.25);
+}
+
+/* --------------------------------------------------------------------------
+   THEME 4 — Warm Sand
+   -------------------------------------------------------------------------- */
+[data-theme="warm_sand"] {
+  --color-bg: #E5DED0;
+  --color-bg-deep: #D5CBBB;
+  --color-surface: #EEE8DC;
+  --color-surface-raised: #F3EDE2;
+  --color-surface-card: #EEE8DC;
+  --color-surface-border: #D2C9B9;
+  --color-surface-subtle: #DED6C7;
+
+  --color-primary: #6797A0;
+  --color-primary-hover: #476F77;
+  --color-primary-light: #9BC6CC;
+  --color-primary-subtle: #C8DFE2;
+  --color-deep-water: #476F77;
+  --color-soft-water: #B5D0D0;
+
+  --color-accent: #78997D;
+  --color-text-main: #3E3930;
+  --color-text-muted: #706A5E;
+  --color-text-subtle: #918A7C;
+  --color-border: #D2C9B9;
+  --color-success: #78997D;
+
+  --bottle-grad-start: #9BC6CC;
+  --bottle-grad-end: #578B96;
+  --bottle-wave: rgba(155, 198, 204, 0.55);
+  --ambient-glow: rgba(103, 151, 160, 0.25);
+}
+
+/* --------------------------------------------------------------------------
+   THEME 5 — Midnight Pool (Atmospheric Dark)
+   -------------------------------------------------------------------------- */
+[data-theme="midnight_pool"] {
+  --color-bg: #172A30;
+  --color-bg-deep: #102126;
+  --color-surface: #20383F;
+  --color-surface-raised: #28434A;
+  --color-surface-card: #20383F;
+  --color-surface-border: #355158;
+  --color-surface-subtle: #243D45;
+
+  --color-primary: #76BFD0;
+  --color-primary-hover: #4A94A7;
+  --color-primary-light: #82C7D6;
+  --color-primary-subtle: #294D56;
+  --color-deep-water: #4A94A7;
+  --color-soft-water: #315F6A;
+
+  --color-accent: #8BB79A;
+  --color-text-main: #E3ECEB;
+  --color-text-muted: #AFC0C2;
+  --color-text-subtle: #81979B;
+  --color-border: #355158;
+  --color-success: #8BB79A;
+
+  --bottle-grad-start: #82C7D6;
+  --bottle-grad-end: #438A9F;
+  --bottle-wave: rgba(130, 199, 214, 0.55);
+  --ambient-glow: rgba(118, 191, 208, 0.2);
+
+  --shadow-subtle: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-card: 0 4px 18px rgba(0, 0, 0, 0.3);
+}
+
+/* --------------------------------------------------------------------------
+   BASE STYLES & ATMOSPHERIC CANVAS
+   -------------------------------------------------------------------------- */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -43,12 +188,15 @@
 body {
   font-family: var(--font-family);
   background-color: var(--color-bg);
+  background-image: radial-gradient(circle at 50% 10%, var(--color-surface-raised) 0%, var(--color-bg) 75%);
   color: var(--color-text-main);
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: flex-start;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Application Mobile Container Shell */
@@ -57,22 +205,24 @@ body {
   max-width: 480px;
   min-height: 100vh;
   background-color: var(--color-bg);
+  background-image: radial-gradient(circle at 50% 15%, var(--color-surface-raised) 0%, var(--color-bg) 80%);
   display: flex;
   flex-direction: column;
   position: relative;
-  box-shadow: 0 0 50px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-card);
+  transition: background-color 0.3s ease;
 }
 
 main.app-content {
   flex: 1;
-  padding: 24px 20px 100px 20px;
+  padding: 24px 20px 96px 20px;
   overflow-y: auto;
 }
 
-/* Screen visibility controls */
+/* Screen visibility */
 .screen {
   display: none;
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeIn 0.25s ease-out;
 }
 
 .screen.active {
@@ -80,29 +230,70 @@ main.app-content {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* --- Hero Physical Bottle Section --- */
+/* Screen Headers */
+.screen-header {
+  margin-bottom: 20px;
+}
+
+.screen-title {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--color-text-main);
+  letter-spacing: -0.02em;
+}
+
+.screen-subtitle {
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+/* --- Today Screen Hero Bottle Section --- */
 .hero-bottle-section {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 10px 0 20px 0;
+  padding: 8px 0 16px 0;
+}
+
+/* Atmospheric Ambient Shape behind bottle (Section 15) */
+.bottle-ambient-backdrop {
+  position: absolute;
+  top: 55%;
+  left: 50%;
+  transform: translate(-50%, -45%);
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, var(--ambient-glow) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .daily-summary-header {
   text-align: center;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .greeting-text {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.consumed-amount-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
 }
 
 .consumed-amount {
@@ -110,20 +301,20 @@ main.app-content {
   font-weight: 800;
   color: var(--color-text-main);
   line-height: 1.1;
-  margin: 4px 0;
+  letter-spacing: -0.03em;
 }
 
 .target-amount-sub {
   font-size: 0.95rem;
   color: var(--color-text-muted);
+  font-weight: 500;
 }
 
 .linear-progress-track {
-  width: 100%;
-  max-width: 240px;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 4px;
+  width: 180px;
+  height: 6px;
+  background: var(--color-surface-border);
+  border-radius: 3px;
   overflow: hidden;
   margin: 10px auto 0 auto;
 }
@@ -131,18 +322,20 @@ main.app-content {
 .linear-progress-fill {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #38bdf8, #0ea5e9);
-  border-radius: 4px;
-  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--color-primary);
+  border-radius: 3px;
+  transition: width 0.5s ease-out;
 }
 
+/* Bottle Visualization Container */
 .bottle-container-widget {
   position: relative;
   width: 220px;
-  height: 380px;
+  height: 360px;
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 1;
 }
 
 .bottle-wrapper {
@@ -156,22 +349,23 @@ main.app-content {
 }
 
 .bottle-wrapper:active {
-  transform: scale(0.96);
+  transform: scale(0.97);
 }
 
 .bottle-wrapper.empty-bottle {
-  animation: pulseEmpty 1.5s infinite ease-in-out;
+  animation: gentlePulse 2.5s infinite ease-in-out;
 }
 
-@keyframes pulseEmpty {
+@keyframes gentlePulse {
   0% { transform: scale(1); }
-  50% { transform: scale(1.04); }
+  50% { transform: scale(1.02); }
   100% { transform: scale(1); }
 }
 
 .bottle-svg {
   width: 100%;
-  height: 300px;
+  height: 290px;
+  overflow: visible;
 }
 
 .liquid-rect {
@@ -179,130 +373,69 @@ main.app-content {
 }
 
 .wave-animation {
-  animation: waveMotion 3s infinite linear;
+  animation: waveMotion 4s infinite linear;
 }
 
 @keyframes waveMotion {
   0% { transform: translateX(0); }
-  50% { transform: translateX(-15px); }
+  50% { transform: translateX(-12px); }
   100% { transform: translateX(0); }
 }
 
 .bottle-status-badge {
   text-align: center;
-  margin-top: -10px;
-  background: var(--color-surface-card);
+  margin-top: -6px;
+  background: var(--color-surface);
   border: 1px solid var(--color-surface-border);
-  padding: 8px 18px;
+  padding: 8px 16px;
   border-radius: var(--radius-md);
-  backdrop-filter: blur(8px);
-  transition: border-color 0.3s ease, background-color 0.3s ease;
-}
-
-.bottle-wrapper.empty-bottle .bottle-status-badge {
-  border-color: var(--color-primary-light);
-  background: rgba(14, 165, 233, 0.2);
+  box-shadow: var(--shadow-subtle);
+  transition: border-color 0.2s ease, background-color 0.3s ease;
 }
 
 .bottle-volume-value {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--color-primary-light);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-text-main);
 }
 
 .bottle-volume-unit {
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   color: var(--color-text-muted);
 }
 
 .bottle-state-label {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--color-text-subtle);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
   margin-top: 2px;
+  font-weight: 600;
 }
 
 .bottle-state-label.tap-hint {
-  color: var(--color-primary-light);
+  color: var(--color-primary);
   font-weight: 700;
-  animation: flashHint 1.2s infinite alternate;
-}
-
-@keyframes flashHint {
-  from { opacity: 0.6; }
-  to { opacity: 1; }
-}
-
-/* Secondary Circular Goal Progress Ring */
-.progress-ring-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 15px;
-  background: var(--color-surface-card);
-  border: 1px solid var(--color-surface-border);
-  padding: 14px 20px;
-  border-radius: var(--radius-md);
-  margin: 20px 0;
-}
-
-.ring-svg {
-  width: 60px;
-  height: 60px;
-  transform: rotate(-90deg);
-}
-
-.ring-bg {
-  stroke: rgba(255, 255, 255, 0.1);
-}
-
-.ring-fill {
-  stroke: var(--color-primary);
-  transition: stroke-dashoffset 0.6s ease;
-}
-
-.ring-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.ring-pct-title {
-  font-size: 1.3rem;
-  font-weight: 700;
-}
-
-.ring-subtitle {
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
 }
 
 /* --- Drinking Actions Grid --- */
 .quick-drink-section {
-  margin-top: 15px;
-}
-
-.section-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 12px;
+  margin-top: 14px;
+  position: relative;
+  z-index: 1;
 }
 
 .drink-buttons-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
 }
 
 .btn-drink {
-  background: var(--color-surface-card);
+  background: var(--color-surface);
   border: 1px solid var(--color-surface-border);
   color: var(--color-text-main);
-  padding: 12px 6px;
+  padding: 12px 4px;
   border-radius: var(--radius-md);
   font-size: 0.95rem;
   font-weight: 700;
@@ -310,39 +443,50 @@ main.app-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  transition: transform 0.15s ease, background-color 0.2s ease, border-color 0.2s ease;
+  justify-content: center;
+  gap: 2px;
+  min-height: 52px;
+  box-shadow: var(--shadow-subtle);
+  transition: transform 0.12s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.btn-drink:hover {
+  border-color: var(--color-primary);
+  background: var(--color-surface-raised);
 }
 
 .btn-drink:active {
-  transform: scale(0.94);
-  background: rgba(14, 165, 233, 0.2);
-  border-color: var(--color-primary);
+  transform: scale(0.95);
+  background: var(--color-primary-subtle);
 }
 
 .btn-drink span.btn-sub {
-  font-size: 0.7rem;
-  color: var(--color-text-subtle);
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
   font-weight: 500;
 }
 
 .action-row-secondary {
   display: flex;
-  gap: 12px;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
+/* Button Foundation */
 .btn {
-  padding: 14px 20px;
+  padding: 13px 18px;
   border-radius: var(--radius-md);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 600;
   border: none;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: background-color 0.2s ease, transform 0.15s ease;
+  min-height: 46px;
+  transition: background-color 0.15s ease, transform 0.12s ease, border-color 0.15s ease;
+  box-sizing: border-box;
 }
 
 .btn-icon {
@@ -367,7 +511,7 @@ main.app-content {
 
 .btn-primary {
   background: var(--color-primary);
-  color: #fff;
+  color: #ffffff;
   flex: 1;
 }
 
@@ -376,36 +520,118 @@ main.app-content {
 }
 
 .btn-secondary {
-  background: var(--color-surface-card);
+  background: var(--color-surface);
   border: 1px solid var(--color-surface-border);
   color: var(--color-text-main);
+  box-shadow: var(--shadow-subtle);
   flex: 1;
 }
 
-.btn-refill {
-  background: linear-gradient(135deg, #0ea5e9, #0284c7);
-  color: white;
-  width: 100%;
-  font-size: 1.05rem;
-  padding: 16px;
-  box-shadow: 0 6px 20px -4px rgba(14, 165, 233, 0.5);
-  margin-top: 10px;
+.btn-secondary:hover {
+  border-color: var(--color-primary);
+  background: var(--color-surface-raised);
 }
 
-/* --- Glass Vessel Component Styling --- */
+.btn-refill {
+  background: var(--color-primary-subtle);
+  border: 1px solid var(--color-surface-border);
+  color: var(--color-deep-water);
+  width: 100%;
+  font-size: 0.96rem;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+}
+
+.btn-refill:hover {
+  background: var(--color-surface-subtle);
+}
+
+/* --- Vessels Section (Glass & Gulp) --- */
+.vessels-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+  position: relative;
+  z-index: 1;
+}
+
 .glass-card {
-  background: var(--color-surface-card);
+  background: var(--color-surface);
   border: 1px solid var(--color-surface-border);
   border-radius: var(--radius-lg);
-  padding: 16px;
+  padding: 14px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 14px;
+  gap: 12px;
+  box-shadow: var(--shadow-subtle);
+  transition: border-color 0.15s ease, background-color 0.3s ease;
 }
 
-.gulp-card {
-  margin-top: 14px;
+.glass-card:hover {
+  border-color: var(--color-primary);
+}
+
+.glass-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.glass-visual {
+  width: 42px;
+  height: 50px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.glass-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.glass-details {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.glass-amount {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--color-text-main);
+  line-height: 1.2;
+}
+
+.glass-label {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.glass-action-btn {
+  flex: 0 0 135px;
+  width: 135px;
+  min-width: 135px;
+  max-width: 135px;
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .gulp-drop {
@@ -427,62 +653,107 @@ main.app-content {
   100% { r: 28px; opacity: 0; stroke-width: 1px; }
 }
 
-.glass-visual {
-  width: 50px;
-  height: 60px;
+@media (max-width: 380px) {
+  .glass-card {
+    padding: 12px;
+    gap: 8px;
+  }
+  .glass-action-btn {
+    flex: 0 0 115px;
+    width: 115px;
+    min-width: 115px;
+    max-width: 115px;
+    font-size: 0.82rem;
+    padding: 9px 8px;
+  }
 }
 
-.glass-svg {
-  width: 100%;
-  height: 100%;
+/* --- Theme Selection Atmosphere Grid (Section 5 & 23) --- */
+.theme-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
 }
 
-.glass-details {
+.theme-card {
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  padding: 12px 10px;
+  cursor: pointer;
+  text-align: center;
+  transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   display: flex;
   flex-direction: column;
+  align-items: center;
 }
 
-.glass-amount {
-  font-size: 1.1rem;
+.theme-card:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+}
+
+.theme-card.selected {
+  border-color: var(--color-primary);
+  background: var(--color-surface-raised);
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.theme-swatch-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+}
+
+.theme-card-name {
+  font-size: 0.88rem;
   font-weight: 700;
+  color: var(--color-text-main);
+  margin-bottom: 2px;
 }
 
-.glass-label {
-  font-size: 0.8rem;
+.theme-card-tag {
+  font-size: 0.72rem;
   color: var(--color-text-muted);
 }
 
-/* --- Onboarding Flow Cards --- */
+/* --- Onboarding Cards (Section 23) --- */
 .onboarding-container {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: 80vh;
+  min-height: 75vh;
 }
 
 .onboarding-card {
-  background: var(--color-surface-card);
+  background: var(--color-surface);
   border: 1px solid var(--color-surface-border);
   border-radius: var(--radius-lg);
-  padding: 24px;
-  backdrop-filter: blur(12px);
+  padding: 28px 24px;
+  box-shadow: var(--shadow-card);
 }
 
 .onboarding-title {
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   font-weight: 800;
+  color: var(--color-text-main);
+  letter-spacing: -0.02em;
   margin-bottom: 8px;
 }
 
 .onboarding-subtitle {
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   color: var(--color-text-muted);
   line-height: 1.5;
-  margin-bottom: 24px;
+  margin-bottom: 22px;
 }
 
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .form-label {
@@ -495,13 +766,15 @@ main.app-content {
 
 .input-control {
   width: 100%;
-  padding: 14px 16px;
+  padding: 13px 16px;
   border-radius: var(--radius-md);
   border: 1px solid var(--color-surface-border);
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--color-surface-raised);
   color: var(--color-text-main);
-  font-size: 1rem;
+  font-size: 0.98rem;
+  font-family: inherit;
   outline: none;
+  transition: border-color 0.15s ease;
 }
 
 .input-control:focus {
@@ -511,12 +784,42 @@ main.app-content {
 .option-cards-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 18px;
 }
 
-.bottle-cap-grid {
-  margin-bottom: 16px;
+.option-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  padding: 14px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  text-align: center;
+  box-shadow: var(--shadow-subtle);
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.option-card:hover {
+  border-color: var(--color-primary);
+}
+
+.option-card.selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-subtle);
+  color: var(--color-deep-water);
+}
+
+.option-card-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+  margin-bottom: 3px;
+}
+
+.option-card-desc {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
 }
 
 .bottle-cap-custom-card {
@@ -524,14 +827,13 @@ main.app-content {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  font-weight: 600;
+  gap: 6px;
 }
 
 .custom-cap-input-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .custom-cap-input-group .input-control {
@@ -540,13 +842,13 @@ main.app-content {
 
 .custom-cap-unit {
   color: var(--color-text-muted);
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-size: 0.92rem;
+  font-weight: 600;
 }
 
 .setting-cap-presets {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   margin-bottom: 10px;
   flex-wrap: wrap;
 }
@@ -555,58 +857,32 @@ main.app-content {
   padding: 6px 12px;
   font-size: 0.82rem;
   border-radius: var(--radius-sm);
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--color-surface-raised);
   border: 1px solid var(--color-surface-border);
   color: var(--color-text-main);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
+  font-weight: 600;
 }
 
 .setting-cap-preset:hover {
-  border-color: var(--color-primary-light);
-  background: rgba(14, 165, 233, 0.1);
+  border-color: var(--color-primary);
 }
 
 .setting-cap-preset.active {
   border-color: var(--color-primary);
-  background: rgba(14, 165, 233, 0.2);
-  color: var(--color-primary-light);
-  font-weight: 700;
+  background: var(--color-primary-subtle);
+  color: var(--color-deep-water);
 }
 
-.option-card {
-  background: rgba(15, 23, 42, 0.5);
-  border: 1px solid var(--color-surface-border);
-  border-radius: var(--radius-md);
-  padding: 16px;
-  cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease;
-  text-align: center;
-}
-
-.option-card.selected {
-  border-color: var(--color-primary);
-  background: rgba(14, 165, 233, 0.15);
-}
-
-.option-card-title {
-  font-weight: 700;
-  font-size: 0.95rem;
-  margin-bottom: 4px;
-}
-
-.option-card-desc {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-}
-
-/* --- History & Stats Screens --- */
+/* --- History Screen Timeline (Section 20) --- */
 .history-day-card {
-  background: var(--color-surface-card);
+  background: var(--color-surface);
   border: 1px solid var(--color-surface-border);
-  border-radius: var(--radius-md);
-  padding: 16px;
-  margin-bottom: 16px;
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-subtle);
 }
 
 .history-day-header {
@@ -620,13 +896,13 @@ main.app-content {
 
 .history-date {
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .history-day-total {
-  font-size: 0.9rem;
-  color: var(--color-primary-light);
-  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--color-primary);
+  font-weight: 700;
 }
 
 .history-item {
@@ -642,7 +918,7 @@ main.app-content {
   align-items: center;
   justify-content: center;
   margin-right: 8px;
-  color: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
 .history-svg-icon {
@@ -652,49 +928,59 @@ main.app-content {
   vertical-align: middle;
 }
 
-/* Stats Chart Container */
+/* --- Insights Screen (Section 21) --- */
 .stats-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .stat-metric-card {
-  background: var(--color-surface-card);
+  background: var(--color-surface);
   border: 1px solid var(--color-surface-border);
-  border-radius: var(--radius-md);
-  padding: 16px;
+  border-radius: var(--radius-lg);
+  padding: 18px 14px;
   text-align: center;
+  box-shadow: var(--shadow-subtle);
 }
 
 .stat-value {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: 800;
-  color: var(--color-primary-light);
+  color: var(--color-text-main);
+  letter-spacing: -0.02em;
 }
 
 .stat-label {
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   color: var(--color-text-muted);
-  text-transform: uppercase;
   margin-top: 4px;
+  font-weight: 500;
 }
 
 .bar-chart-container {
-  background: var(--color-surface-card);
+  background: var(--color-surface);
   border: 1px solid var(--color-surface-border);
-  border-radius: var(--radius-md);
-  padding: 20px;
-  margin-bottom: 20px;
+  border-radius: var(--radius-lg);
+  padding: 20px 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-subtle);
+}
+
+.chart-header {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--color-text-main);
 }
 
 .chart-bars {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  height: 160px;
-  padding-top: 20px;
+  height: 140px;
+  padding-top: 10px;
 }
 
 .chart-bar-col {
@@ -706,7 +992,7 @@ main.app-content {
 }
 
 .chart-bar-fill {
-  width: 20px;
+  width: 22px;
   background: var(--color-primary);
   border-radius: 4px 4px 0 0;
   transition: height 0.5s ease;
@@ -714,28 +1000,31 @@ main.app-content {
 }
 
 .chart-bar-fill.reached {
-  background: var(--color-success);
+  background: var(--color-deep-water);
 }
 
 .chart-bar-label {
   font-size: 0.75rem;
   color: var(--color-text-muted);
+  font-weight: 500;
 }
 
-/* --- Science Transparency Page --- */
+/* --- Transparency / Methodology Card --- */
 .transparency-card {
-  background: var(--color-surface-card);
+  background: var(--color-surface);
   border: 1px solid var(--color-surface-border);
   border-radius: var(--radius-lg);
   padding: 20px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-subtle);
 }
 
 .transparency-title {
-  font-size: 1.2rem;
-  font-weight: 700;
-  margin-bottom: 8px;
-  color: var(--color-primary-light);
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+  color: var(--color-text-main);
+  letter-spacing: -0.01em;
 }
 
 .breakdown-list {
@@ -748,6 +1037,7 @@ main.app-content {
   border-bottom: 1px solid var(--color-surface-border);
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 
 .breakdown-item:last-child {
@@ -755,7 +1045,7 @@ main.app-content {
 }
 
 .breakdown-label {
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 600;
 }
 
@@ -765,17 +1055,17 @@ main.app-content {
 }
 
 .breakdown-val {
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 700;
-  color: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
 /* Toggle Switch Component */
 .toggle-switch {
   position: relative;
   display: inline-block;
-  width: 46px;
-  height: 26px;
+  width: 44px;
+  height: 24px;
 }
 
 .toggle-switch input {
@@ -791,20 +1081,21 @@ main.app-content {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(255, 255, 255, 0.2);
-  transition: 0.3s;
-  border-radius: 26px;
+  background-color: var(--color-surface-border);
+  transition: 0.25s;
+  border-radius: 24px;
 }
 
 .toggle-switch .slider:before {
   position: absolute;
   content: "";
-  height: 20px;
-  width: 20px;
+  height: 18px;
+  width: 18px;
   left: 3px;
   bottom: 3px;
   background-color: white;
-  transition: 0.3s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: 0.25s;
   border-radius: 50%;
 }
 
@@ -822,44 +1113,45 @@ nav.app-navbar {
   bottom: 0;
   width: 100%;
   max-width: 480px;
-  background: rgba(15, 23, 42, 0.92);
-  backdrop-filter: blur(16px);
+  background: var(--color-surface);
   border-top: 1px solid var(--color-surface-border);
   display: flex;
   justify-content: space-around;
-  padding: 10px 0 14px 0;
+  padding: 10px 0 12px 0;
   z-index: 100;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.02);
 }
 
 .nav-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   color: var(--color-text-muted);
   text-decoration: none;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 600;
   background: none;
   border: none;
   cursor: pointer;
-  transition: color 0.2s ease;
+  transition: color 0.15s ease;
+  min-width: 60px;
 }
 
 .nav-item svg {
   width: 22px;
   height: 22px;
-  fill: currentColor;
 }
 
 .nav-item.active {
-  color: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
-/* Reduced Motion Override */
+/* Reduced Motion (Section 28) */
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }

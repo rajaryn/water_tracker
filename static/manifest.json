@@ -4,8 +4,8 @@
   "description": "Research-based physical water bottle hydration tracker PWA",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0ea5e9",
+  "background_color": "#F7F7F2",
+  "theme_color": "#F7F7F2",
   "orientation": "portrait-primary",
   "icons": [
     {
