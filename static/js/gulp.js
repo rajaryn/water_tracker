@@ -125,7 +125,8 @@ export class WaterGulp {
           <span class="glass-label">Sip / Gulp of Water</span>
         </div>
         <button class="btn btn-secondary take-gulp-btn">
-          💧 Take a Gulp
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+          <span>Take a Gulp</span>
         </button>
       </div>
     `;

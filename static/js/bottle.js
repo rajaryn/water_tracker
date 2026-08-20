@@ -13,11 +13,18 @@ export class WaterBottle {
   }
 
   update(currentVolumeMl, capacityMl, theme) {
+    const capacityChanged = capacityMl !== undefined && capacityMl !== this.capacityMl;
+    const themeChanged = theme !== undefined && theme !== this.theme;
+
     if (capacityMl) this.capacityMl = capacityMl;
     if (currentVolumeMl !== undefined) this.currentVolumeMl = Math.max(0, Math.min(currentVolumeMl, this.capacityMl));
     if (theme) this.theme = theme;
 
-    this.updateLiquidLevel();
+    if (capacityChanged || themeChanged) {
+      this.render();
+    } else {
+      this.updateLiquidLevel();
+    }
   }
 
   getFillPercentage() {
@@ -165,7 +172,7 @@ export class WaterBottle {
     if (pct >= 50) return 'Half Full';
     if (pct >= 15) return 'Low Water';
     if (pct > 0) return 'Almost Empty';
-    return 'Empty - Tap Bottle to Refill ↻';
+    return 'Empty - Tap Bottle to Refill';
   }
 
   updateLiquidLevel() {
@@ -177,6 +184,7 @@ export class WaterBottle {
     const liquidRect = this.container.querySelector('#liquidRect');
     const wavePath = this.container.querySelector('#wavePath');
     const volumeVal = this.container.querySelector('.bottle-volume-value');
+    const volumeUnit = this.container.querySelector('.bottle-volume-unit');
     const stateLabel = this.container.querySelector('.bottle-state-label');
     const wrapper = this.container.querySelector('.bottle-wrapper');
 
@@ -188,6 +196,7 @@ export class WaterBottle {
       wavePath.setAttribute('d', `M 40 ${liquidY} Q 70 ${liquidY - 6} 100 ${liquidY} T 160 ${liquidY} L 160 340 L 40 340 Z`);
     }
     if (volumeVal) volumeVal.textContent = this.currentVolumeMl;
+    if (volumeUnit) volumeUnit.textContent = ` / ${this.capacityMl} ml`;
     if (stateLabel) {
       stateLabel.textContent = this.getStatusText();
       if (fillPct === 0) {

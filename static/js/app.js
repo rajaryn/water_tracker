@@ -171,7 +171,10 @@ class App {
             <p class="onboarding-subtitle">
               Track your water intake like bringing a physical water bottle to life. Designed for adult health & research-based targets.
             </p>
-            <button class="btn btn-primary" id="onboardNext1" style="width:100%">Get Started →</button>
+            <button class="btn btn-primary" id="onboardNext1" style="width:100%">
+              <span>Get Started</span>
+              <svg class="btn-icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
           </div>
         `;
         document.getElementById('onboardNext1').onclick = () => { step = 2; renderStep(); };
@@ -200,7 +203,10 @@ class App {
               </div>
             </div>
 
-            <button class="btn btn-primary" id="onboardNext2" style="width:100%">Continue →</button>
+            <button class="btn btn-primary" id="onboardNext2" style="width:100%">
+              <span>Continue</span>
+              <svg class="btn-icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
           </div>
         `;
 
@@ -243,7 +249,10 @@ class App {
               </select>
             </div>
 
-            <button class="btn btn-primary" id="onboardNext3" style="width:100%">Bottle Setup →</button>
+            <button class="btn btn-primary" id="onboardNext3" style="width:100%">
+              <span>Bottle Setup</span>
+              <svg class="btn-icon-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
           </div>
         `;
 
@@ -254,31 +263,87 @@ class App {
           renderStep();
         };
       } else if (step === 4) {
+        const isCustomInitially = ![500, 750, 1000, 1500].includes(onboardState.bottle_capacity_ml);
         card.innerHTML = `
           <div class="onboarding-card">
             <h2 class="onboarding-title">Your Water Bottle</h2>
             <p class="onboarding-subtitle">How much water does your physical bottle hold?</p>
 
-            <div class="option-cards-grid">
-              <div class="option-card" data-cap="500">500 ml</div>
-              <div class="option-card selected" data-cap="750">750 ml</div>
-              <div class="option-card" data-cap="1000">1.0 L (1000ml)</div>
-              <div class="option-card" data-cap="1500">1.5 L (1500ml)</div>
+            <div class="option-cards-grid bottle-cap-grid">
+              <div class="option-card ${onboardState.bottle_capacity_ml === 500 && !isCustomInitially ? 'selected' : ''}" data-cap="500">500 ml</div>
+              <div class="option-card ${onboardState.bottle_capacity_ml === 750 && !isCustomInitially ? 'selected' : ''}" data-cap="750">750 ml</div>
+              <div class="option-card ${onboardState.bottle_capacity_ml === 1000 && !isCustomInitially ? 'selected' : ''}" data-cap="1000">1.0 L (1000ml)</div>
+              <div class="option-card ${onboardState.bottle_capacity_ml === 1500 && !isCustomInitially ? 'selected' : ''}" data-cap="1500">1.5 L (1500ml)</div>
+              <div class="option-card bottle-cap-custom-card ${isCustomInitially ? 'selected' : ''}" data-cap="custom">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                <span>Custom Quantity</span>
+              </div>
             </div>
 
-            <button class="btn btn-primary" id="onboardFinish" style="width:100%">Complete Setup 🎉</button>
+            <div id="customBottleWrapper" class="form-group" style="display: ${isCustomInitially ? 'block' : 'none'}; margin-bottom: 20px;">
+              <label class="form-label" for="onboardCustomCap">Enter Custom Capacity (ml)</label>
+              <div class="custom-cap-input-group">
+                <input type="number" id="onboardCustomCap" class="input-control" placeholder="e.g. 400" min="50" max="10000" step="10" value="${isCustomInitially ? onboardState.bottle_capacity_ml : ''}" />
+                <span class="custom-cap-unit">ml</span>
+              </div>
+            </div>
+
+            <button class="btn btn-primary" id="onboardFinish" style="width:100%">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <span>Complete Setup</span>
+            </button>
           </div>
         `;
 
-        card.querySelectorAll('.option-card').forEach(opt => {
+        let isCustom = isCustomInitially;
+        const customWrapper = document.getElementById('customBottleWrapper');
+        const customInput = document.getElementById('onboardCustomCap');
+
+        card.querySelectorAll('.bottle-cap-grid .option-card').forEach(opt => {
           opt.onclick = () => {
-            card.querySelectorAll('.option-card').forEach(o => o.classList.remove('selected'));
+            card.querySelectorAll('.bottle-cap-grid .option-card').forEach(o => o.classList.remove('selected'));
             opt.classList.add('selected');
-            onboardState.bottle_capacity_ml = parseInt(opt.dataset.cap, 10);
+
+            if (opt.dataset.cap === 'custom') {
+              isCustom = true;
+              if (customWrapper) customWrapper.style.display = 'block';
+              if (customInput) {
+                customInput.focus();
+                const val = parseInt(customInput.value, 10);
+                if (val > 0) onboardState.bottle_capacity_ml = val;
+              }
+            } else {
+              isCustom = false;
+              if (customWrapper) customWrapper.style.display = 'none';
+              onboardState.bottle_capacity_ml = parseInt(opt.dataset.cap, 10);
+            }
           };
         });
 
+        if (customInput) {
+          customInput.oninput = () => {
+            const val = parseInt(customInput.value, 10);
+            if (val > 0) {
+              onboardState.bottle_capacity_ml = val;
+            }
+          };
+        }
+
         document.getElementById('onboardFinish').onclick = async () => {
+          if (isCustom) {
+            const val = parseInt(customInput.value, 10);
+            if (!val || val <= 0) {
+              alert('Please enter a valid bottle capacity in ml (e.g. 400 ml).');
+              customInput.focus();
+              return;
+            }
+            if (val > 10000) {
+              alert('Please enter a realistic bottle capacity (up to 10,000 ml).');
+              customInput.focus();
+              return;
+            }
+            onboardState.bottle_capacity_ml = val;
+          }
           await this.completeOnboarding(onboardState);
         };
       }
@@ -494,8 +559,12 @@ class App {
           <div class="history-items-list">
             ${group.items.map(item => `
               <div class="history-item">
-                <div>
-                  <span class="history-item-icon">${item.type === 'drink' ? '💧' : '↻'}</span>
+                <div style="display:flex; align-items:center;">
+                  <span class="history-item-icon">
+                    ${item.type === 'drink' 
+                      ? '<svg class="history-svg-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>' 
+                      : '<svg class="history-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>'}
+                  </span>
                   <span>${item.type === 'drink' ? `Drank ${item.amount_ml} ml` : `Refilled bottle (+${item.amount_added_ml} ml)`}</span>
                 </div>
                 <span style="color:var(--color-text-subtle); font-size:0.8rem;">
@@ -652,7 +721,17 @@ class App {
         
         <div class="form-group">
           <label class="form-label">Bottle Capacity (ml)</label>
-          <input type="number" id="settingBottleCap" class="input-control" value="${this.bottle.capacity_ml}" step="50" />
+          <div class="setting-cap-presets">
+            <button type="button" class="setting-cap-preset ${this.bottle.capacity_ml === 400 ? 'active' : ''}" data-cap="400">400 ml</button>
+            <button type="button" class="setting-cap-preset ${this.bottle.capacity_ml === 500 ? 'active' : ''}" data-cap="500">500 ml</button>
+            <button type="button" class="setting-cap-preset ${this.bottle.capacity_ml === 750 ? 'active' : ''}" data-cap="750">750 ml</button>
+            <button type="button" class="setting-cap-preset ${this.bottle.capacity_ml === 1000 ? 'active' : ''}" data-cap="1000">1.0 L</button>
+            <button type="button" class="setting-cap-preset ${this.bottle.capacity_ml === 1500 ? 'active' : ''}" data-cap="1500">1.5 L</button>
+          </div>
+          <div class="custom-cap-input-group">
+            <input type="number" id="settingBottleCap" class="input-control" value="${this.bottle.capacity_ml}" placeholder="e.g. 400" min="50" max="10000" step="10" />
+            <span class="custom-cap-unit">ml</span>
+          </div>
         </div>
 
         <div class="form-group">
@@ -695,6 +774,33 @@ class App {
       </div>
     `;
 
+    // Preset buttons in settings
+    const capInput = document.getElementById('settingBottleCap');
+    const presetBtns = container.querySelectorAll('.setting-cap-preset');
+    presetBtns.forEach(btn => {
+      btn.onclick = () => {
+        const capVal = btn.dataset.cap;
+        if (capInput) {
+          capInput.value = capVal;
+        }
+        presetBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      };
+    });
+
+    if (capInput) {
+      capInput.oninput = () => {
+        const currentVal = parseInt(capInput.value, 10);
+        presetBtns.forEach(b => {
+          if (parseInt(b.dataset.cap, 10) === currentVal) {
+            b.classList.add('active');
+          } else {
+            b.classList.remove('active');
+          }
+        });
+      };
+    }
+
     const notifToggle = document.getElementById('settingNotifToggle');
     const notifStatusText = document.getElementById('notifStatusText');
     if (notifToggle) {
@@ -720,15 +826,22 @@ class App {
     document.getElementById('saveBottleSettingsBtn').onclick = async () => {
       const cap = parseInt(document.getElementById('settingBottleCap').value, 10);
       const theme = document.getElementById('settingBottleTheme').value;
-      if (cap > 0) {
-        this.bottle.capacity_ml = cap;
-        this.bottle.theme = theme;
-        if (this.bottle.current_volume_ml > cap) this.bottle.current_volume_ml = cap;
-
-        await saveLocalData('bottle', { id: 'current_bottle', ...this.bottle });
-        alert('Bottle settings saved!');
-        this.renderHomeScreen();
+      if (!cap || cap <= 0) {
+        alert('Please enter a valid bottle capacity in ml (e.g. 400).');
+        return;
       }
+      if (cap > 10000) {
+        alert('Please enter a realistic bottle capacity (up to 10,000 ml).');
+        return;
+      }
+
+      this.bottle.capacity_ml = cap;
+      this.bottle.theme = theme;
+      if (this.bottle.current_volume_ml > cap) this.bottle.current_volume_ml = cap;
+
+      await saveLocalData('bottle', { id: 'current_bottle', ...this.bottle });
+      alert('Bottle settings saved!');
+      this.renderHomeScreen();
     };
 
     document.getElementById('exportDataBtn').onclick = async () => {

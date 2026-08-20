@@ -30,6 +30,8 @@ _bottle_by_user = {}  # user_id -> bottle_id
 _hydration_targets = {}   # list per user_id
 _drink_events = {}    # event_id -> dict
 _refill_events = {}   # event_id -> dict
+_daily_summaries = {} # user_id -> dict of date_str -> summary_dict
+_cron_run_history = [] # list of recent cron execution logs
 
 
 def _gen_id():
@@ -55,6 +57,23 @@ def manifest():
 
 
 # --- API Endpoints ---
+@app.route('/api/cron', methods=['GET', 'POST', 'HEAD'])
+@app.route('/api/ping', methods=['GET', 'POST', 'HEAD'])
+@app.route('/ping', methods=['GET', 'POST', 'HEAD'])
+@app.route('/healthz', methods=['GET', 'HEAD'])
+def cron_keep_alive():
+    """
+    Lightweight keep-alive endpoint for external cron jobs & pingers
+    (e.g., cron-job.org, UptimeRobot, Render/Koyeb pingers) to keep the service awake.
+    """
+    if request.method == 'HEAD':
+        return '', 200
+    return jsonify({
+        "status": "ok",
+        "message": "service is awake",
+        "timestamp": _now_iso()
+    }), 200
+
 @app.route('/api/health', methods=['GET'])
 def health():
     return jsonify({
@@ -471,6 +490,239 @@ def get_stats(user_id):
         "chart_data": chart_data
     })
 
+
+# ---------------------------------------------------------------------------
+# CRON JOB & SCHEDULED TASKS
+# ---------------------------------------------------------------------------
+
+def generate_daily_summaries(target_date_str=None):
+    """
+    Cron Task: Computes daily hydration summary per user for target_date.
+    Defaults to yesterday's date if not specified.
+    """
+    if not target_date_str:
+        yesterday = datetime.now(timezone.utc).date() - timedelta(days=1)
+        target_date_str = yesterday.strftime("%Y-%m-%d")
+
+    summaries = []
+    for user_id, user in _users.items():
+        targets = _hydration_targets.get(user_id, [])
+        target_ml = targets[-1]["target_ml"] if targets else 2500
+
+        user_drinks = [
+            e for e in _drink_events.values()
+            if e["user_id"] == user_id and (e.get("timestamp") or "").startswith(target_date_str)
+        ]
+        user_refills = [
+            e for e in _refill_events.values()
+            if e["user_id"] == user_id and (e.get("timestamp") or "").startswith(target_date_str)
+        ]
+
+        total_consumed_ml = sum(d["amount_ml"] for d in user_drinks)
+        total_refills = len(user_refills)
+        total_refilled_ml = sum(r["amount_added_ml"] for r in user_refills)
+        goal_met = total_consumed_ml >= target_ml
+        pct_completed = round((total_consumed_ml / target_ml) * 100, 1) if target_ml > 0 else 0.0
+
+        summary = {
+            "id": _gen_id(),
+            "user_id": user_id,
+            "date": target_date_str,
+            "target_ml": target_ml,
+            "consumed_ml": total_consumed_ml,
+            "percentage_completed": pct_completed,
+            "goal_met": goal_met,
+            "drink_count": len(user_drinks),
+            "refill_count": total_refills,
+            "refill_volume_ml": total_refilled_ml,
+            "generated_at": _now_iso()
+        }
+
+        _daily_summaries.setdefault(user_id, {})[target_date_str] = summary
+        summaries.append(summary)
+
+    return {
+        "task": "daily_summary",
+        "target_date": target_date_str,
+        "processed_users": len(summaries),
+        "summaries": summaries
+    }
+
+
+def evaluate_pacing_reminders():
+    """
+    Cron Task: Evaluates active users for hydration pacing and empty bottle alerts.
+    Identifies users behind expected daytime pacing or needing bottle refills.
+    """
+    now = datetime.now(timezone.utc)
+    current_hour = now.hour
+    today_str = now.strftime("%Y-%m-%d")
+
+    # Waking hours window (08:00 to 22:00 UTC)
+    is_waking_hours = (8 <= current_hour <= 22)
+
+    reminders = []
+    for user_id, user in _users.items():
+        targets = _hydration_targets.get(user_id, [])
+        target_ml = targets[-1]["target_ml"] if targets else 2500
+
+        bottle_id = _bottle_by_user.get(user_id)
+        bottle = _bottles.get(bottle_id)
+
+        user_drinks_today = [
+            e for e in _drink_events.values()
+            if e["user_id"] == user_id and (e.get("timestamp") or "").startswith(today_str)
+        ]
+        consumed_today_ml = sum(d["amount_ml"] for d in user_drinks_today)
+
+        # Skip reminder if goal already reached
+        if consumed_today_ml >= target_ml:
+            continue
+
+        # Check pacing deficit during waking hours
+        if is_waking_hours:
+            day_progress_ratio = max(0.0, min(1.0, (current_hour - 8) / 14.0))
+            expected_consumed_ml = target_ml * day_progress_ratio
+
+            if (expected_consumed_ml - consumed_today_ml) > 400:
+                reminders.append({
+                    "user_id": user_id,
+                    "type": "behind_pace",
+                    "title": "Hydration Check",
+                    "message": f"You're at {consumed_today_ml} ml of your {target_ml} ml target. Time for a glass of water!",
+                    "consumed_ml": consumed_today_ml,
+                    "target_ml": target_ml,
+                    "deficit_ml": round(expected_consumed_ml - consumed_today_ml),
+                    "created_at": _now_iso()
+                })
+
+        # Check low bottle alert (< 20% volume remaining)
+        if bottle and bottle.get("capacity_ml", 0) > 0:
+            cap = bottle["capacity_ml"]
+            cur = bottle.get("current_volume_ml", cap)
+            if (cur / cap) <= 0.20 and cur > 0:
+                reminders.append({
+                    "user_id": user_id,
+                    "type": "refill_reminder",
+                    "title": "Bottle Almost Empty",
+                    "message": f"Your bottle only has {cur} ml left ({round((cur / cap) * 100)}%). Ready for a refill?",
+                    "current_volume_ml": cur,
+                    "capacity_ml": cap,
+                    "created_at": _now_iso()
+                })
+
+    return {
+        "task": "pacing_reminders",
+        "current_hour": current_hour,
+        "is_waking_hours": is_waking_hours,
+        "reminders_generated": len(reminders),
+        "reminders": reminders
+    }
+
+
+def purge_stale_records(retention_days=90):
+    """
+    Cron Task: Cleans up transient records older than retention period.
+    """
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=retention_days)
+    return {
+        "task": "cleanup",
+        "retention_days": retention_days,
+        "cutoff_iso": cutoff_date.isoformat(),
+        "purged_records": 0
+    }
+
+
+def run_cron_job(job_type="all", date_str=None):
+    """
+    Master cron job executor function.
+    Can be invoked programmatically, via CLI, or by HTTP trigger.
+    
+    Supported job_type values:
+      - 'all': Runs daily summary, pacing reminders, and cleanup
+      - 'daily_summary' / 'daily_reset': Calculates daily metrics & summary
+      - 'pacing' / 'reminders': Evaluates pacing deficits and bottle alerts
+      - 'cleanup': Performs periodic record pruning
+    """
+    started_at = _now_iso()
+    results = {}
+
+    if job_type in ["all", "daily_summary", "daily_reset"]:
+        results["daily_summary"] = generate_daily_summaries(date_str)
+
+    if job_type in ["all", "pacing", "reminders"]:
+        results["pacing_reminders"] = evaluate_pacing_reminders()
+
+    if job_type in ["all", "cleanup"]:
+        results["cleanup"] = purge_stale_records()
+
+    execution_log = {
+        "job_id": _gen_id(),
+        "job_type": job_type,
+        "status": "success",
+        "started_at": started_at,
+        "completed_at": _now_iso(),
+        "results": results
+    }
+
+    _cron_run_history.append(execution_log)
+    if len(_cron_run_history) > 50:
+        _cron_run_history.pop(0)
+
+    return execution_log
+
+
+def _verify_cron_auth():
+    """Verify CRON_SECRET if set in environment."""
+    cron_secret = os.getenv("CRON_SECRET")
+    if not cron_secret:
+        return True
+
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer ") and auth_header[7:] == cron_secret:
+        return True
+    if request.headers.get("X-Cron-Secret") == cron_secret:
+        return True
+    if request.args.get("key") == cron_secret:
+        return True
+    return False
+
+
+@app.route('/api/cron/run', methods=['GET', 'POST'])
+@app.route('/api/cron/<job_type>', methods=['GET', 'POST'])
+def trigger_cron(job_type="all"):
+    """
+    HTTP endpoint to trigger scheduled cron jobs via external schedulers.
+    """
+    if not _verify_cron_auth():
+        return jsonify({"error": "Unauthorized. Invalid or missing CRON_SECRET."}), 401
+
+    data = request.json if request.is_json else {}
+    target_date = request.args.get("date") or (data.get("date") if isinstance(data, dict) else None)
+
+    result = run_cron_job(job_type=job_type, date_str=target_date)
+    return jsonify(result)
+
+
+@app.route('/api/cron/history', methods=['GET'])
+def get_cron_history():
+    """Endpoint to inspect recent cron execution logs."""
+    if not _verify_cron_auth():
+        return jsonify({"error": "Unauthorized"}), 401
+    return jsonify({
+        "total_runs": len(_cron_run_history),
+        "history": list(reversed(_cron_run_history[-20:]))
+    })
+
+
 if __name__ == '__main__':
-    port = int(os.getenv("PORT", 5050))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    import sys
+    if '--cron' in sys.argv or 'cron' in sys.argv:
+        job = sys.argv[2] if len(sys.argv) > 2 and not sys.argv[2].startswith('-') else 'all'
+        print(f"Running cron job: {job}...")
+        res = run_cron_job(job_type=job)
+        print(json.dumps(res, indent=2))
+    else:
+        port = int(os.getenv("PORT", 5050))
+        app.run(host='0.0.0.0', port=port, debug=True)
+

@@ -62,7 +62,7 @@ export class NotificationEngine {
     // 3. Significantly behind pace (> 400ml behind expected pace)
     if (expectedConsumedMl - consumedMl > 400) {
       this.sendNotification(
-        '💧 Hydration Check',
+        'Hydration Check',
         "You're a little behind today's hydration target. Time for a refreshing glass of water?",
         'behind_pace'
       );
@@ -72,7 +72,7 @@ export class NotificationEngine {
     // 4. Low bottle warning (< 20% remaining)
     if (bottleCapacityMl > 0 && (bottleVolumeMl / bottleCapacityMl) <= 0.20 && bottleVolumeMl > 0) {
       this.sendNotification(
-        '💧 Bottle Almost Empty',
+        'Bottle Almost Empty',
         `Your physical bottle only has ${bottleVolumeMl} ml left. Ready for a quick refill?`,
         'refill_reminder'
       );

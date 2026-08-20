@@ -74,7 +74,8 @@ export class WaterGlass {
           <span class="glass-label">Glass of Water (Independent of Bottle)</span>
         </div>
         <button class="btn btn-secondary drink-glass-btn">
-          🥛 Drink Glass
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l-1.5 15a3 3 0 0 1-3 3h-3a3 3 0 0 1-3-3L6 3z"/></svg>
+          <span>Drink Glass</span>
         </button>
       </div>
     `;

@@ -345,6 +345,22 @@ main.app-content {
   transition: background-color 0.2s ease, transform 0.15s ease;
 }
 
+.btn-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.btn-icon-right {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
 .btn:active {
   transform: scale(0.97);
 }
@@ -499,6 +515,65 @@ main.app-content {
   margin-bottom: 20px;
 }
 
+.bottle-cap-grid {
+  margin-bottom: 16px;
+}
+
+.bottle-cap-custom-card {
+  grid-column: span 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.custom-cap-input-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.custom-cap-input-group .input-control {
+  flex: 1;
+}
+
+.custom-cap-unit {
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.setting-cap-presets {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.setting-cap-preset {
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  border-radius: var(--radius-sm);
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--color-surface-border);
+  color: var(--color-text-main);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.setting-cap-preset:hover {
+  border-color: var(--color-primary-light);
+  background: rgba(14, 165, 233, 0.1);
+}
+
+.setting-cap-preset.active {
+  border-color: var(--color-primary);
+  background: rgba(14, 165, 233, 0.2);
+  color: var(--color-primary-light);
+  font-weight: 700;
+}
+
 .option-card {
   background: rgba(15, 23, 42, 0.5);
   border: 1px solid var(--color-surface-border);
@@ -563,7 +638,18 @@ main.app-content {
 }
 
 .history-item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-right: 8px;
+  color: var(--color-primary-light);
+}
+
+.history-svg-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 /* Stats Chart Container */
